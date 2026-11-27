@@ -26,7 +26,7 @@ void RunSingleInstanceTests();
 void RunPageTests();
 void RunFeedTests();
 void RunLogTests();
-void RunTokenTests();
+void RunSourceScanTests();
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
@@ -69,8 +69,8 @@ int main() {
     std::printf("feed done\n");
     RunLogTests();
     std::printf("log done\n");
-    RunTokenTests();
-    std::printf("tokens done\n");
+    RunSourceScanTests();
+    std::printf("source scan done\n");
 
     blueward::DeleteTree(g_tempRoot);
     std::printf("%d checks, %d failed\n", g_checks, g_failures);

@@ -1,5 +1,5 @@
 #pragma once
-// Tiny assertion harness, in the spirit of the donor's check.h: one counter, one failure line.
+// Tiny assertion harness: one counter, one failure line.
 
 #include <cstdio>
 #include <string>

@@ -2,9 +2,9 @@
 
 # BLUEWARD
 
-BLUEWARD is a Win32 + Direct2D launcher and patcher for the Japanese PC client of **Azur Promilia 1.0.2**. It replaces five resource files inside the game with a Russian translation archive published in this repository's releases, and puts the original files back on demand. It is an unofficial fan tool, not affiliated with Yostar or Gryphline. It uses no account, sends no telemetry, and does not interact with the anti-cheat.
+BLUEWARD is a Win32 + Direct2D launcher and patcher for the Japanese PC client of **Azur Promilia 1.0.2**. It replaces five resource files inside the game with a Russian translation archive published in this repository's releases, and puts the original files back on demand. It is an unofficial fan tool, not affiliated with Yostar or Manjuu. It uses no account, sends no telemetry, and does not interact with the anti-cheat.
 
-Product version `0.1.2`; target game `1.0.2`. The resource revision is detected from the installed game, not compiled in: the launcher reads builtin and delta manifests and uses the highest revision it finds.
+Product version `0.1.3`; target game `1.0.2`. The resource revision is detected from the installed game, not compiled in: the launcher reads builtin and delta manifests and uses the highest revision it finds.
 
 ## How it works
 
@@ -114,7 +114,7 @@ Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe`
 
 ## Network
 
-Initial requests are only the canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs: the latest manifest, `manifest-<revision>.json`, `BLUEWARD.exe`, and `patch-<revision>.zip`. Redirects are followed at most five times and only to `github.com`, `objects.githubusercontent.com` or `release-assets.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. Hosts are matched exactly, so `release-assets.githubusercontent.com.evil` is refused. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.2 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
+Initial requests are only the canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs: the latest manifest, `manifest-<revision>.json`, `BLUEWARD.exe`, and `patch-<revision>.zip`. Redirects are followed at most five times and only to `github.com`, `objects.githubusercontent.com` or `release-assets.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. Hosts are matched exactly, so `release-assets.githubusercontent.com.evil` is refused. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.3 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
 
 ## Tests
 
@@ -123,7 +123,7 @@ build.cmd
 & "C:\Program Files\CMake\bin\ctest.exe" --test-dir build --output-on-failure
 ```
 
-Current result: **1003 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real installed game. It covers:
+Current result: **1105 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real installed game. It covers:
 
 | Area | Checks |
 | --- | --- |
@@ -137,9 +137,9 @@ Current result: **1003 checks, 0 failed**. CTest name `core`. The suite runs hea
 | Config defaults/round-trip/corrupt rename, Telegram validation, log rotation/format/sanitisation | `tests/test_config.cpp`, `test_log.cpp` |
 | Self-update versioning, file handoff, rollback, cleanup, manifest level read | `tests/test_self_update.cpp` |
 | Single instance, page models, exact UI states, geometry | `tests/test_single_instance.cpp`, `test_pages.cpp` |
-| Source token gate (owner URL masked exactly), no API host | `tests/test_tokens.cpp` |
+| Source scan: no GitHub API host, no compiled revision | `tests/test_source_scan.cpp` |
 
-The authoritative test matrix is `launcher-spec/TESTS.md` (T-001…T-139). The headless suite implements the mechanical subset; `docs/GAPS.md` lists the manual and instrumentation-only cases that are not automated, including the real-game acceptance run.
+The headless suite implements the mechanical subset; `docs/GAPS.md` lists the manual and instrumentation-only cases that are not automated, including the real-game acceptance run.
 
 ## Assets and licensing
 
@@ -151,10 +151,6 @@ The authoritative test matrix is `launcher-spec/TESTS.md` (T-001…T-139). The h
 | `third_party/miniz` | miniz 2.2.0 | MIT; license in `third_party/miniz/LICENSE` |
 
 The background clip is official promotional media, not a fan asset. It is **not distributed in this source tree**; official release binaries embed it, and source builds fall back to the gradient. See `docs/ATTRIBUTION.md`.
-
-## Repository owner URL exception
-
-The GitHub owner name contains the literal that the donor-purge scan forbids. It is allowed in exactly one place: the canonical URL prefix `https://github.com/nightfun-pixel/ap-launcher/`, which is required by the release feed, the self-update URL, the patch URL, the git remote and the README link. The source scan in `tests/test_tokens.cpp` masks that exact prefix before checking; any other occurrence of the owner token, and every other donor token, fails the gate. The canonical ban list lives in the planning documents outside this repository (`launcher-spec/INVENTORY.md` §6.7), not in the product tree.
 
 ## Known gaps
 

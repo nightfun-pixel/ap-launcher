@@ -2,13 +2,13 @@
 
 # Test gaps
 
-`launcher-spec/TESTS.md` defines T-001…T-139. The CTest suite (`build\blueward_tests.exe`, 958 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
+The test matrix uses T-001…T-139 case numbers. The CTest suite (`build\blueward_tests.exe`, 1105 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
 
 ## Covered headlessly
 
 | Area | Test IDs (partial where noted) |
 | --- | --- |
-| Source token gate, no API host | T-002 |
+| Source scan: no GitHub API host, no compiled revision | T-002 |
 | Config, Telegram, log rotation/format | T-013, T-014, T-016 |
 | Page models and exact UI states | T-019, T-020 (model only), T-021 (model only) |
 | Game discovery, path rejection, version detection, builtin/delta revision selection | T-024, T-025, T-026, T-027, T-029, T-030 |
@@ -28,7 +28,7 @@
 | Test IDs | What is missing | Why |
 | --- | --- | --- |
 | T-001, T-003, T-005 | PE headers, imports, resource sizes, `strings` scans | Run by the release checklist against `dist\BLUEWARD.exe`; not part of CTest. Verified for this build: PE32+ GUI x64, static CRT, `RT_RCDATA` 101 = 4,128,422 bytes, version block correct, zero banned strings. |
-| T-004 | Icon visual review and donor-hash comparison | Visual; the icon has 16/24/32/48/64/128/256 px, all 32 bpp. |
+| T-004 | Icon visual review | Visual; the icon has 16/24/32/48/64/128/256 px, all 32 bpp. |
 | T-006, T-007, T-008, T-009, T-018 | Video loop/audio, gradient fallback, DPI, keyboard focus, window drag | Need a desktop session; see the manual protocol. |
 | T-010, T-012, T-028 | Telegram launch, asset provenance review, folder picker | Desktop actions. |
 | T-011 | Full message-catalog iteration | The gate strings are tested exactly; the rest of the catalog is reviewed by reading `src/core/messages.h`. |
@@ -36,7 +36,7 @@
 | T-017, T-092 | Second-instance activation and per-game mutex contention | Unit test covers the named mutex; the UI activation and 30 s wait need two real processes. |
 | T-022 | Process watcher updating the idle UI | The process probe is tested; the polling UI is manual. |
 | T-023, T-119, T-120 | Real UAC, elevated/non-elevated fixtures | The `asInvoker` read path is tested; a `requireAdministrator` fixture and real tokens are manual. |
-| T-031, T-032, T-033, T-034 | Revision display on the real tree, game-version preflight, installed status, read-only idempotence | Partially covered by models and synthetic trees; the real tree is at delta 3273853, but no r3 manifest is published yet. |
+| T-031, T-032, T-033, T-034 | Revision display on the real tree, game-version preflight, installed status, read-only idempotence | Partially covered by models and synthetic trees; the real tree is at delta 3273853 and the r3 manifest is published, but the in-game acceptance run is still manual. |
 | T-042, T-044 | Manifest revision code path, manifest SHA-256 in `install.json` | Revisions 3075915, 3219598 and 3273853 are accepted as data; the state file carries `manifest_sha256`, but no test asserts the saved value yet. |
 | T-047, T-051 | TLS negative matrix, connect/body stall timeouts | Would need a TLS loopback with generated certificates and a stalling server; WinHTTP keeps validation on. |
 | T-048, T-049, T-050 | Five-hop chain, loop detection, 429/503 `Retry-After`, 5xx retry counts | Redirect allowlist/refusal is tested; retries exist but are not exercised by a status-sequence server except the loopback cases. |
@@ -54,13 +54,13 @@
 | T-126, T-127, T-128, T-129, T-130 | Shell/process instrumentation, handle audit, reparse fixtures, path fuzzing | Code review and instrumentation, not CTest. |
 | T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139 | Size/line count, startup/CPU/RAM, OS matrix, locale, CI, real-game acceptance, manifest cache | Manual, CI or the real game. |
 
-## Hosting gap
+## Hosting
 
-The repository and the `launcher-v0.1.1` release are private. `curl` against the canonical latest asset URL returns HTTP 404 without authentication, and BLUEWARD sends no token by design. The manifest, launcher and patch URLs are correct, but the in-app update check and the patch download cannot fetch from a private release. Make the release assets public (or mirror the manifest and archive to a public host) before pointing a user at this build.
+The repository and its releases are public; anonymous requests for `manifest.json`, `manifest-3273853.json` and `BLUEWARD.exe` return HTTP 200. GitHub serves release assets through `release-assets.githubusercontent.com`; 0.1.2 follows that redirect, while 0.1.1 and older reject it and must be replaced manually once.
 
 ## Real-client gaps
 
-- The local game has builtin `3075915` plus delta `3273853`; detection reports `3273853`. The no-patch state is expected until the packer publishes `manifest-3273853.json`; there is no compiled revision gate left to refuse the tree.
-- The real 241 MB archive, GitHub redirect chain and Range support (T-048, T-055, T-076) have not been exercised; only loopback equivalents have.
+- The local game has builtin `3075915` plus delta `3273853`; detection reports `3273853`. `manifest-3273853.json` and `patch-3273853` are published; the in-game install and restore are not yet accepted.
+- The real 233,942,380-byte archive, GitHub redirect chain and Range support (T-048, T-055, T-076) have not been exercised; only loopback equivalents have.
 - The five targets have not been accepted by the running game, and ACE/repair behaviour is unknown. Do not run the acceptance test while logged into the game.
 
