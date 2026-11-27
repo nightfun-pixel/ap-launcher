@@ -1,0 +1,45 @@
+# Build output
+build/
+dist/
+out/
+
+# Background clip: official promotional media, never committed
+*.mp4
+*.webm
+res/bg/
+
+# Visual Studio / MSVC
+.vs/
+*.user
+*.suo
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.obj
+*.lib
+*.exp
+*.ilk
+*.pdb
+*.idb
+*.lastbuildstate
+*.tlog
+
+# Temp and logs
+temp/
+*.log
+*.tmp
+*.part
+*.apbak
+*.blueward-new
+*.blueward-tmp*
+*.old
+*.new
+
+# Local state
+state/
+config.json
+install.json
+
+# Editor
+.idea/
+*.swp

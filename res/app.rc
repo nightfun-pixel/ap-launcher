@@ -1,0 +1,53 @@
+// Resources of BLUEWARD: the program icon, the embedded 720p background and the version block
+// Explorer and Task Manager read. ASCII only: rc.exe runs under the system code page.
+// Version numbers arrive from CMake as BLUEWARD_VER_* definitions read from src/core/version.h.
+
+#include <windows.h>
+#include "../src/resource.h"
+
+// Two steps: the inner macro expands a number, the outer turns it into a string literal. Adjacent
+// literals are concatenated, so 0, 1, 0 becomes "0" "." "1" "." "0" = "0.1.0".
+#define BLUEWARD_STRINGIFY_INNER(x) #x
+#define BLUEWARD_STRINGIFY(x) BLUEWARD_STRINGIFY_INNER(x)
+#define BLUEWARD_VERSION_STRING \
+    BLUEWARD_STRINGIFY(BLUEWARD_VER_MAJOR) "." BLUEWARD_STRINGIFY(BLUEWARD_VER_MINOR) "." BLUEWARD_STRINGIFY(BLUEWARD_VER_PATCH)
+
+IDI_BLUEWARD ICON "blueward.ico"
+
+// The background loop, compiled in as RCDATA 101. A build configured with
+// -DBLUEWARD_EMBED_VIDEO=OFF keeps the gradient path and carries no clip.
+#ifdef BLUEWARD_BG_720
+IDR_BG_720 RCDATA "bg-720.mp4"
+#endif
+
+// The PE manifest is embedded by the linker (/MANIFEST:EMBED, asInvoker); res\app.manifest is the
+// human-readable copy of the same settings and is not compiled twice.
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION BLUEWARD_VER_MAJOR,BLUEWARD_VER_MINOR,BLUEWARD_VER_PATCH,0
+ PRODUCTVERSION BLUEWARD_VER_MAJOR,BLUEWARD_VER_MINOR,BLUEWARD_VER_PATCH,0
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "BLUEWARD project"
+            VALUE "FileDescription", "BLUEWARD"
+            VALUE "FileVersion", BLUEWARD_VERSION_STRING
+            VALUE "InternalName", "BLUEWARD"
+            VALUE "OriginalFilename", "BLUEWARD.exe"
+            VALUE "ProductName", "BLUEWARD"
+            VALUE "ProductVersion", BLUEWARD_VERSION_STRING
+            VALUE "Comments", "Azur Promilia JP launcher and translation patcher"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END
