@@ -16,14 +16,14 @@ BLUEWARD 0.1.1 removes the compiled resource baseline. The launcher now detects 
 
 | Asset | SHA-256 | Size |
 | --- | --- | --- |
-| `BLUEWARD.exe` | `1f75b19c8245c7dcfaf5da9507cca0aaa3d07241cbbf7bea83c3569e6ef4b408` | 5,093,888 bytes |
+| `BLUEWARD.exe` | `47e6e6c8f66bcdea363ad0eff495e8ae4a074236adbbb19e24f2544b831c1f51` | 5,093,888 bytes |
 | `manifest.json` | compatibility manifest: launcher 0.1.1, patch block still `patch-3219598` | вЂ” |
 
 The executable embeds the 720p background (`RT_RCDATA` 101, 4,128,422 bytes). The source tree does not contain the clip; `res/bg` stays outside git.
 
 ## Verification
 
-- `build.cmd`: 955 checks, 0 failed.
+- `build.cmd`: 958 checks, 0 failed.
 - Revision detection on the real local game tree: `valid=1 revision=3273853 source=delta packages=5`.
 - The compatibility manifest parses with the new parser and with the 0.1.0 parser logic (`launcher=0.1.1`, `patch=3219598`, five files).
 - The executable is unsigned; SmartScreen may warn on first run.

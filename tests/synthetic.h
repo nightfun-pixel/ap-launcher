@@ -24,11 +24,13 @@ inline const std::vector<std::string>& Sources() {
     return names;
 }
 
+// The five 3273853 targets from game-inspect/3273853/targets-3273853.json. Three bundle names moved
+// from 3219598; startup.r and onest-font.r still resolve to the builtin files.
 inline const std::vector<std::string>& Targets() {
     static const std::vector<std::string> targets = {
-        "AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/z5xzl3cg6ao0ilpbzykexg.r",
-        "AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/fcl0wxz2z6hoffogv4xgzw.r",
-        "AzurPromiliaJP_Data/.res/default_package/BundleFiles/yr49bxop0f3reujfsmyfca.r",
+        "AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/heqmts9lcjdvbupu0x2wpg.r",
+        "AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/5g1m5b4sbqlfalcxoaquw.r",
+        "AzurPromiliaJP_Data/.res/default_package/BundleFiles/h3y7ujukwn9qbhoqhzkkg.r",
         "AzurPromiliaJP_Data/StreamingAssets/.res/static_package/6pq4a7hlp7zidu91dvvww.r",
         "AzurPromiliaJP_Data/StreamingAssets/.res/default_package/hqqoy0ojvzpggukcf5m85w.r",
     };

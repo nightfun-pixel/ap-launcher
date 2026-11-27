@@ -2,7 +2,7 @@
 
 # Test gaps
 
-`launcher-spec/TESTS.md` defines T-001…T-139. The CTest suite (`build\blueward_tests.exe`, 955 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
+`launcher-spec/TESTS.md` defines T-001…T-139. The CTest suite (`build\blueward_tests.exe`, 958 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
 
 ## Covered headlessly
 

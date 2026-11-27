@@ -18,16 +18,16 @@ const char* kValid = R"({
   "patch": {
     "version": "2026.11.27-1",
     "game_version": "1.0.2",
-    "resource_revision": "3219598",
-    "url": "https://github.com/nightfun-pixel/ap-launcher/releases/download/patch-3219598/patch-3219598.zip",
+    "resource_revision": "3273853",
+    "url": "https://github.com/nightfun-pixel/ap-launcher/releases/download/patch-3273853/patch-3273853.zip",
     "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
     "size": 241479593,
     "files": [
-      {"source":"vstring.bytes","target":"AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/z5xzl3cg6ao0ilpbzykexg.r","before_sha256":"3333333333333333333333333333333333333333333333333333333333333333","before_size":133622104,"sha256":"4444444444444444444444444444444444444444444444444444444444444444","size":143827740},
-      {"source":"table_data.bytes","target":"AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/fcl0wxz2z6hoffogv4xgzw.r","before_sha256":"5555555555555555555555555555555555555555555555555555555555555555","before_size":28840170,"sha256":"6666666666666666666666666666666666666666666666666666666666666666","size":28840170},
-      {"source":"static-text.r","target":"AzurPromiliaJP_Data/.res/default_package/BundleFiles/yr49bxop0f3reujfsmyfca.r","before_sha256":"7777777777777777777777777777777777777777777777777777777777777777","before_size":4993892,"sha256":"8888888888888888888888888888888888888888888888888888888888888888","size":4993892},
-      {"source":"startup.r","target":"AzurPromiliaJP_Data/StreamingAssets/.res/static_package/6pq4a7hlp7zidu91dvvww.r","before_sha256":"9999999999999999999999999999999999999999999999999999999999999999","before_size":58707878,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":58707878},
-      {"source":"onest-font.r","target":"AzurPromiliaJP_Data/StreamingAssets/.res/default_package/hqqoy0ojvzpggukcf5m85w.r","before_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","before_size":5109385,"sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","size":5109385}
+      {"source":"vstring.bytes","target":"AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/heqmts9lcjdvbupu0x2wpg.r","before_sha256":"60e09fa31ac7e43e2a74cb7e722cf19b3331a188817125a086a57a17a34987ee","before_size":134055486,"sha256":"4444444444444444444444444444444444444444444444444444444444444444","size":143827740},
+      {"source":"table_data.bytes","target":"AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/5g1m5b4sbqlfalcxoaquw.r","before_sha256":"4369839fd46cd2c821f33dc2b92c46cc87f4413a215be0abe17461ec743896c2","before_size":28840130,"sha256":"6666666666666666666666666666666666666666666666666666666666666666","size":28840130},
+      {"source":"static-text.r","target":"AzurPromiliaJP_Data/.res/default_package/BundleFiles/h3y7ujukwn9qbhoqhzkkg.r","before_sha256":"9771462bacb96c7ee544fe53d0d2a4e56e3576b1336d2a2ec6653bfef1a6a138","before_size":4993822,"sha256":"8888888888888888888888888888888888888888888888888888888888888888","size":4993892},
+      {"source":"startup.r","target":"AzurPromiliaJP_Data/StreamingAssets/.res/static_package/6pq4a7hlp7zidu91dvvww.r","before_sha256":"c7c80b98b263f161583a2ab52a5b7039636acbabcac8c365f9f37224d11bc4b3","before_size":58707878,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":58707878},
+      {"source":"onest-font.r","target":"AzurPromiliaJP_Data/StreamingAssets/.res/default_package/hqqoy0ojvzpggukcf5m85w.r","before_sha256":"a584d52f66f66a32dc2a2e9bfd7a119eed10290fc79795b6730896a5440d2a7f","before_size":5109385,"sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","size":5109385}
     ]
   }
 })";
@@ -59,12 +59,12 @@ void RunManifestTests() {
         CHECK(code.empty());
         CHECK(manifest.schema == 1);
         CHECK(manifest.launcher.version == "0.1.0");
-        CHECK(manifest.patch.resourceRevision == "3219598");
+        CHECK(manifest.patch.resourceRevision == "3273853");
         CHECK(manifest.patch.files.size() == 5);
         if (manifest.patch.files.size() == 5) {
             CHECK(manifest.patch.files[0].source == "vstring.bytes");
-            CHECK(manifest.patch.files[0].target == "AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/z5xzl3cg6ao0ilpbzykexg.r");
-            CHECK(manifest.patch.files[0].beforeSize == 133622104);
+            CHECK(manifest.patch.files[0].target == "AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/heqmts9lcjdvbupu0x2wpg.r");
+            CHECK(manifest.patch.files[0].beforeSize == 134055486);
             CHECK(manifest.patch.files[0].size == 143827740);
             CHECK(manifest.patch.files[4].source == "onest-font.r");
         }
@@ -97,8 +97,8 @@ void RunManifestTests() {
         CHECK(!blueward::IsAllowedPatchTarget(tooLong, why));
 
         const std::string duplicateBasename = ReplaceFirst(
-            std::string(kValid), "AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/fcl0wxz2z6hoffogv4xgzw.r",
-            "AzurPromiliaJP_Data/.res/other_package/BundleFiles/z5xzl3cg6ao0ilpbzykexg.r");
+            std::string(kValid), "AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/5g1m5b4sbqlfalcxoaquw.r",
+            "AzurPromiliaJP_Data/.res/other_package/BundleFiles/heqmts9lcjdvbupu0x2wpg.r");
         std::string code;
         CHECK(!Parses(duplicateBasename, &code));
         CHECK(code == "E_MANIFEST_TARGET");
@@ -115,17 +115,17 @@ void RunManifestTests() {
     {
         // T-039: hashes and sizes.
         std::string code;
-        CHECK(!Parses(ReplaceFirst(kValid, "3333333333333333333333333333333333333333333333333333333333333333",
-                                   "333333333333333333333333333333333333333333333333333333333333333"),
+        CHECK(!Parses(ReplaceFirst(kValid, "60e09fa31ac7e43e2a74cb7e722cf19b3331a188817125a086a57a17a34987ee",
+                                   "60e09fa31ac7e43e2a74cb7e722cf19b3331a188817125a086a57a17a34987e"),
                       &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "3333333333333333333333333333333333333333333333333333333333333333",
-                                   "333333333333333333333333333333333333333333333333333333333333333Z"),
+        CHECK(!Parses(ReplaceFirst(kValid, "60e09fa31ac7e43e2a74cb7e722cf19b3331a188817125a086a57a17a34987ee",
+                                   "60e09fa31ac7e43e2a74cb7e722cf19b3331a188817125a086a57a17a34987eZ"),
                       &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "\"before_size\":28840170", "\"before_size\":0"), &code));
+        CHECK(!Parses(ReplaceFirst(kValid, "\"before_size\":134055486", "\"before_size\":0"), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
         CHECK(!Parses(ReplaceFirst(kValid, "\"size\":143827740", "\"size\":1073741825"), &code));
@@ -152,32 +152,33 @@ void RunManifestTests() {
     {
         // T-041, T-042: the revision is data, not a compiled constant.
         std::string code;
-        const std::string revision3273853 = ReplaceFirst(
-            ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"3273853\""),
-            "patch-3219598/patch-3219598.zip", "patch-3273853/patch-3273853.zip");
         blueward::Manifest parsed;
         std::string error;
-        CHECK(blueward::ParseManifest(revision3273853, parsed, error, &code));
+        CHECK(blueward::ParseManifest(kValid, parsed, error, &code));
         CHECK(parsed.patch.resourceRevision == "3273853");
         CHECK(parsed.patch.files.size() == 5);
         code.clear();
         CHECK(Parses(ReplaceFirst(
-            ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"3075915\""),
-            "patch-3219598/patch-3219598.zip", "patch-3075915/patch-3075915.zip")));
+            ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": \"3219598\""),
+            "patch-3273853/patch-3273853.zip", "patch-3219598/patch-3219598.zip")));
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": 3219598"), &code));
+        CHECK(Parses(ReplaceFirst(
+            ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": \"3075915\""),
+            "patch-3273853/patch-3273853.zip", "patch-3075915/patch-3075915.zip")));
+        code.clear();
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": 3273853"), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"\""), &code));
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": \"\""), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"12a\""), &code));
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": \"12a\""), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"1234567890123\""), &code));
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3273853\"", "\"resource_revision\": \"1234567890123\""), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
-        CHECK(!Parses(ReplaceFirst(kValid, "patch-3219598/patch-3219598.zip", "patch-3219598/patch-3219599.zip"), &code));
+        CHECK(!Parses(ReplaceFirst(kValid, "patch-3273853/patch-3273853.zip", "patch-3273853/patch-3273854.zip"), &code));
         CHECK(code == "E_NET_URL");
         code.clear();
         CHECK(!Parses(ReplaceFirst(kValid, "\"game_version\": \"1.0.2\"", "\"game_version\": \"1.0\""), &code));
