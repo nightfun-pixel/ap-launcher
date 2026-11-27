@@ -31,5 +31,5 @@ The release page is authoritative; these are the uploaded bytes.
 ## Verification
 
 - `build.cmd`: 1105 checks, 0 failed; CTest `core` passes.
-- The binary contains `Manjuu`, no `Gryphline`, no `api.github.com` and no compiled resource revision.
+- The binary contains `Manjuu`, no `api.github.com` and no compiled resource revision.
 - The five before/after pairs and the `patch-3273853.zip` archive are unchanged from r3.
