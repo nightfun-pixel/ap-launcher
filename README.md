@@ -110,7 +110,7 @@ A second install of the same patch is a no-op with `Уже установлен�
 
 ## Self-update
 
-Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe` is downloaded from the canonical latest URL, verified against `launcher.size`/`launcher.sha256`, and its `RT_MANIFEST` is read as data to compare `requestedExecutionLevel` with the current elevation. The file is copied to `BLUEWARD.exe.new`, verified, the running image is renamed to `BLUEWARD.exe.old`, `.new` is moved into place, the single-instance mutex is released, the new image starts with the original command line, and the old process exits. A failure after the rename restores `.old`, deletes `.new`, reacquires the mutex and keeps the launcher running with a stable `E_SELFUPDATE_*` code. The next start deletes `.old` and `.new` with three 200 ms retries. 0.1.1 and older cannot follow GitHub's `release-assets.githubusercontent.com` redirect, so their self-update fails; those users must download 0.1.2 manually once. From 0.1.2 onward self-update works through that host.
+Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe` is downloaded from the canonical latest URL, verified against `launcher.size`/`launcher.sha256`, and its `RT_MANIFEST` is read as data to compare `requestedExecutionLevel` with the current elevation. The file is copied to `BLUEWARD.exe.new`, verified, the running image is renamed to `BLUEWARD.exe.old`, `.new` is moved into place, the single-instance mutex is released, the new image starts with the original command line, and the old process exits. A failure after the rename restores `.old`, deletes `.new`, reacquires the mutex and keeps the launcher running with a stable `E_SELFUPDATE_*` code. The next start deletes `.old` and `.new` with three 200 ms retries. 0.1.1 and older cannot follow GitHub's `release-assets.githubusercontent.com` redirect, so their self-update fails; those users must download 0.1.3 manually once. From 0.1.2 onward self-update works through that host.
 
 ## Network
 
@@ -160,7 +160,7 @@ The background clip is official promotional media, not a fan asset. It is **not 
 - Elevation comparison is implemented and the `asInvoker` path is tested; a `requireAdministrator` fixture (T-120) and real UAC runs (T-023, T-119) are manual.
 - Disk-space, per-game mutex contention, `ReplaceFileW` failure injection, ACL preservation, crash-kill recovery and UI responsiveness are not fully automated.
 - The executable is unsigned; SmartScreen will warn on first run.
-- The published 0.1.1 launcher cannot follow GitHub's release-assets redirect and cannot self-update; 0.1.2 must be downloaded manually once. The 0.1.2 allowlist accepts only the documented `release-assets.githubusercontent.com` host, not a wildcard.
+- The published 0.1.1 launcher cannot follow GitHub's release-assets redirect and cannot self-update; 0.1.3 must be downloaded manually once. The 0.1.2+ allowlist accepts only the documented `release-assets.githubusercontent.com` host, not a wildcard.
 
 See `docs/GAPS.md` for the test-by-test list.
 
