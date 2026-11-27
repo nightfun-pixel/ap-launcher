@@ -2,7 +2,7 @@
 
 # Test gaps
 
-The test matrix uses T-001…T-139 case numbers. The CTest suite (`build\blueward_tests.exe`, 1105 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
+The test matrix uses T-001…T-139 case numbers. The CTest suite (`build\blueward_tests.exe`, 865 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
 
 ## Covered headlessly
 

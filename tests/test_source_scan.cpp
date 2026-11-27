@@ -69,22 +69,36 @@ void RunSourceScanTests() {
     Walk(BLUEWARD_SOURCE_DIR, files);
     CHECK(files.size() > 20);
     int scanned = 0;
+    std::string apiOffender;
     for (const std::wstring& path : files) {
         const std::string text = ReadAll(path);
         if (text.empty()) continue;
         ++scanned;
-        CHECK_MSG(Lower(text).find(apiHost) == std::string::npos, blueward::Narrow(path) + " calls the GitHub API host");
+        if (Lower(text).find(apiHost) != std::string::npos) {
+            apiOffender = blueward::Narrow(path);
+            break;
+        }
     }
     CHECK(scanned > 20);
+    CHECK_MSG(apiOffender.empty(), apiOffender + " calls the GitHub API host");
 
     // Revisions are data from the game or the feed; none is compiled into the product.
     const char* revisions[] = {"3075915", "3219598", "3273853"};
     std::vector<std::wstring> product;
     Walk(std::wstring(BLUEWARD_SOURCE_DIR) + L"\\src", product);
     CHECK(product.size() > 20);
+    std::string revisionOffender;
+    std::string revisionValue;
     for (const std::wstring& path : product) {
         const std::string text = ReadAll(path);
-        for (const char* revision : revisions)
-            CHECK_MSG(text.find(revision) == std::string::npos, blueward::Narrow(path) + " hardcodes revision " + revision);
+        for (const char* revision : revisions) {
+            if (text.find(revision) != std::string::npos) {
+                revisionOffender = blueward::Narrow(path);
+                revisionValue = revision;
+                break;
+            }
+        }
+        if (!revisionOffender.empty()) break;
     }
+    CHECK_MSG(revisionOffender.empty(), revisionOffender + " hardcodes revision " + revisionValue);
 }

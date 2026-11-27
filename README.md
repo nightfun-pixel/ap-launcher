@@ -123,7 +123,7 @@ build.cmd
 & "C:\Program Files\CMake\bin\ctest.exe" --test-dir build --output-on-failure
 ```
 
-Current result: **1105 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real installed game. It covers:
+Current result: **865 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real installed game. It covers:
 
 | Area | Checks |
 | --- | --- |
