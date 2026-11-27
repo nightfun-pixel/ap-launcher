@@ -85,6 +85,19 @@ void RunPageTests() {
         CHECK(restore && !restore->enabled);
     }
     {
+        // While the feed is in flight the state line names the revision being checked.
+        blueward::ui::AppView view;
+        view.hasGame = true;
+        view.gameVersion = L"1.0.2";
+        view.resourceRevision = L"3273853";
+        view.localState = blueward::LocalState::Ready;
+        view.canInstall = true;
+        view.feedChecking = true;
+        const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
+        CHECK(model.status == L"Проверка: ресурс 3273853");
+        CHECK(FindRow(model, L"Проверка") != nullptr);
+    }
+    {
         // A local revision without a published manifest disables install and keeps self-update alive.
         blueward::ui::AppView view;
         view.hasGame = true;

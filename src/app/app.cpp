@@ -550,6 +550,7 @@ void App::CheckFeed(bool announce) {
     }
     const std::wstring local = LocalResourceRevision(config_.gamePath);
     view_.feedChecking = true;
+    if (window_) window_->Invalidate();
     checkThread_ = std::thread([this, local] {
         WinHttpClient http;
         std::string error;

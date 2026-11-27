@@ -29,11 +29,11 @@ UiModel BuildMain(const AppView& view) {
     }
     model.badge = view.installed ? msg::FromUtf8(msg::kIdleInstalled) : (view.hasGame ? msg::FromUtf8(msg::kIdleReady) : msg::FromUtf8(msg::kIdleNoGame));
 
+    const std::wstring revisionLabel =
+        view.resourceRevision.empty() ? std::wstring(msg::FromUtf8(msg::kUnknown)) : view.resourceRevision;
     model.rows.push_back({L"path", L"Папка игры", view.hasGame ? view.gamePath : L"Не выбрана", true});
     if (view.hasGame) {
-        const std::wstring revision = view.resourceRevision.empty() ? std::wstring(msg::FromUtf8(msg::kUnknown))
-                                                                   : view.resourceRevision;
-        const std::wstring check = view.noPatch ? msg::NoPatchRow(view.resourceRevision) : L"ресурс " + revision;
+        const std::wstring check = view.noPatch ? msg::NoPatchRow(view.resourceRevision) : L"ресурс " + revisionLabel;
         model.rows.push_back({L"text", L"Проверка", check, view.noPatch || view.localState == LocalState::NeedsGameUpdate});
     }
     model.rows.push_back({L"text", L"Перевод",
@@ -70,6 +70,8 @@ UiModel BuildMain(const AppView& view) {
     model.percent = FormatPercent(view.progress);
     if (busy || !view.error.empty()) {
         model.status = view.status;
+    } else if (view.feedChecking && view.hasGame) {
+        model.status = L"Проверка: ресурс " + revisionLabel;
     } else if (view.noPatch && view.hasGame) {
         model.status = msg::NoPatch(view.resourceRevision);
     } else {
