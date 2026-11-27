@@ -35,7 +35,7 @@ Toolchain used and verified: MSVC 19.44 (Visual Studio 2022 Build Tools), CMake 
 
 `build.cmd` runs `vswhere`, `vcvars64.bat`, configures CMake/Ninja in `Release` with the static CRT, builds `--clean-first`, runs `build\blueward_tests.exe`, and copies the result to `dist\BLUEWARD.exe`. A bare `cmake --build` outside a `vcvars64` shell fails to find the Windows headers; use the script. The background clip is not in the source tree: `build.cmd` detects its absence and builds the gradient-only variant. To reproduce the official artifact, place the clip at `res/bg/bg-720.mp4` (SHA-256 `3C57F682…C7015B`, 4,128,422 bytes) before building.
 
-The build is warning-free with `/W4 /permissive- /utf-8`. The executable has no `VCRUNTIME140.dll`, `MSVCP140.dll` or `d3dcompiler_*.dll` dependency. Official release artifact with the clip: 5,093,888 bytes, SHA-256 `47E6E6C8F66BCDEA363AD0EFF495E8AE4A074236ADBBB19E24F2544B831C1F51`; a source-only build without the clip is smaller and has a different hash.
+The build is warning-free with `/W4 /permissive- /utf-8`. The executable has no `VCRUNTIME140.dll`, `MSVCP140.dll` or `d3dcompiler_*.dll` dependency. Official release artifact with the clip: 5,093,888 bytes, SHA-256 `DD631513B8AF5C85F2C3D91B55D7593279A44061B71903F38D878F4131E0CEFB`; a source-only build without the clip is smaller and has a different hash.
 
 ## Run
 

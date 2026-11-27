@@ -1,6 +1,6 @@
 #pragma once
 // A fake AZUPRO_JP tree and a synthetic patch archive. Nothing here touches the installed game.
-// The five target paths mirror ops/launcher_targets.json; the bytes are invented.
+// The five target paths mirror game-inspect/3273853/targets-3273853.json; the bytes are invented.
 
 #include <windows.h>
 
