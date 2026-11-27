@@ -86,6 +86,58 @@ void RunFeedTests() {
         }
     }
     {
+        // A missing latest manifest still resolves through manifest-<localRevision>.json.
+        loopback::Server server([&](const loopback::Request& request) {
+            loopback::Reply reply;
+            if (request.Path() == "/latest/download/manifest-3273853.json") {
+                reply.body = patchBody;
+            } else {
+                reply.status = 404;
+            }
+            return reply;
+        });
+        blueward::WinHttpClient http;
+        blueward::FeedCheck check;
+        error.clear();
+        const blueward::FeedStatus status =
+            blueward::FetchFeed(http, "3273853", check, error, server.Url("/latest/download/manifest.json"));
+        CHECK(status == blueward::FeedStatus::Available);
+        CHECK(error.empty());
+        CHECK(check.status == blueward::FeedStatus::Available);
+        CHECK(check.launcherKnown);
+        CHECK(check.launcher.version == "0.1.1");
+        CHECK(check.patchManifest.patch.resourceRevision == "3273853");
+        CHECK(check.patchManifest.patch.files.size() == 5);
+        const std::vector<loopback::Request> requests = server.Requests();
+        CHECK(requests.size() == 2);
+        if (requests.size() == 2) {
+            CHECK(requests[0].Path() == "/latest/download/manifest.json");
+            CHECK(requests[1].Path() == "/latest/download/manifest-3273853.json");
+        }
+    }
+    {
+        // Both manifests missing: the normal no-patch state, not E_NET.
+        loopback::Server server([](const loopback::Request& request) {
+            loopback::Reply reply;
+            reply.status = request.Path() == "/latest/download/manifest.json" ? 410 : 404;
+            return reply;
+        });
+        blueward::WinHttpClient http;
+        blueward::FeedCheck check;
+        error.clear();
+        const blueward::FeedStatus status =
+            blueward::FetchFeed(http, "3273853", check, error, server.Url("/latest/download/manifest.json"));
+        CHECK(status == blueward::FeedStatus::NoPatch);
+        CHECK(error.empty());
+        CHECK(check.status == blueward::FeedStatus::NoPatch);
+        CHECK(!check.launcherKnown);
+        CHECK(check.patchManifest.patch.files.empty());
+        CHECK(server.Count() == 2);
+        CHECK(!blueward::HasInstallState(testutil::Path(L"feed-state")));
+        for (std::size_t i = 0; i < fixture.before.size(); ++i)
+            CHECK(testutil::Read(testgame::TargetPath(fixture.gameDir, i)) == fixture.before[i]);
+    }
+    {
         // The fallback 404 is the no-patch state, not a network failure; the launcher update stays offered.
         loopback::Server server([&](const loopback::Request& request) {
             loopback::Reply reply;
@@ -155,6 +207,24 @@ void RunFeedTests() {
             blueward::FetchFeed(http, "3273853", check, error, server.Url("/latest/download/manifest.json"));
         CHECK(status == blueward::FeedStatus::Available);
         CHECK(check.patchManifest.patch.resourceRevision == "3273853");
+        CHECK(server.Count() == 1);
+    }
+    {
+        // A server error is not mistaken for the no-patch state, and no fallback is attempted.
+        loopback::Server server([](const loopback::Request&) {
+            loopback::Reply reply;
+            reply.status = 500;
+            return reply;
+        });
+        blueward::WinHttpClient http;
+        blueward::FeedCheck check;
+        error.clear();
+        const blueward::FeedStatus status =
+            blueward::FetchFeed(http, "3273853", check, error, server.Url("/latest/download/manifest.json"));
+        CHECK(status == blueward::FeedStatus::Error);
+        CHECK(check.status == blueward::FeedStatus::Error);
+        CHECK(check.errorCode == "E_NET");
+        CHECK(!error.empty());
         CHECK(server.Count() == 1);
     }
     {

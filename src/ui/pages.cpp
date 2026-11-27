@@ -143,8 +143,35 @@ Layout ComputeLayout(const UiModel& model, float width, float height) {
     layout.contentBottom = y;
 
     const float buttonHeight = 44.0f;
-    if ((model.page == Page::Settings && model.buttons.size() > 2) || model.buttons.size() > 2) {
-        // Two columns, so a settings or error page does not need a tall stack of buttons.
+    if (!model.error.empty() && model.buttons.size() > 2) {
+        // The error card keeps the primary action on its own full-width row: the label
+        // "Установить / Обновить перевод" does not fit a half column of the 480 px card, and a
+        // clipped primary button hides the only action that moves the user forward.
+        const float gap = 8.0f;
+        const float columnWidth = (cardWidth - 56 - gap) / 2.0f;
+        const std::size_t rest = model.buttons.size() - 1;
+        const std::size_t rows = (rest + 1) / 2;
+        const float gridHeight =
+            buttonHeight + gap + static_cast<float>(rows) * buttonHeight + static_cast<float>(rows - 1) * gap;
+        const float top = cardY + cardHeight - (compact ? 20.0f : 24.0f) - gridHeight;
+        layout.buttons.resize(model.buttons.size());
+        for (std::size_t i = 0; i < model.buttons.size(); ++i) {
+            PlacedButton placed;
+            placed.id = model.buttons[i].id;
+            placed.primary = model.buttons[i].primary;
+            placed.enabled = model.buttons[i].enabled;
+            if (i == 0) {
+                placed.rect = {cardX + 28, top, cardWidth - 56, buttonHeight};
+            } else {
+                const std::size_t row = (i - 1) / 2, column = (i - 1) % 2;
+                placed.rect = {cardX + 28 + static_cast<float>(column) * (columnWidth + gap),
+                               top + buttonHeight + gap + static_cast<float>(row) * (buttonHeight + gap), columnWidth,
+                               buttonHeight};
+            }
+            layout.buttons[i] = placed;
+        }
+    } else if (model.buttons.size() > 2) {
+        // Two columns, so a settings page does not need a tall stack of buttons.
         const float gap = 8.0f;
         const float columnWidth = (cardWidth - 56 - gap) / 2.0f;
         const std::size_t rows = (model.buttons.size() + 1) / 2;

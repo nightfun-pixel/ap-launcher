@@ -411,7 +411,12 @@ bool IsAllowedRedirectUrl(std::string_view url, std::string& why) {
         why = "a redirect with userinfo, an IP literal, a trailing dot or a fragment is refused";
         return false;
     }
-    if (parts.host == "github.com" || parts.host == "objects.githubusercontent.com") return true;
+    // Exact hosts only. GitHub redirects release assets to release-assets.githubusercontent.com;
+    // a suffixed lookalike such as release-assets.githubusercontent.com.evil is a different host
+    // and is refused below.
+    if (parts.host == "github.com" || parts.host == "objects.githubusercontent.com" ||
+        parts.host == "release-assets.githubusercontent.com")
+        return true;
     why = "redirect host " + parts.host + " is not allowed";
     return false;
 }

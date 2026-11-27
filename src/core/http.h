@@ -1,7 +1,8 @@
 #pragma once
 // The launcher's only network code: WinHTTP GET with TLS 1.2+, cookies off, manual redirects that
-// may only land on github.com / objects.githubusercontent.com, and no identifying headers beyond the
-// user agent. Plain http is accepted only for a loopback address, which the tests use.
+// may only land on github.com, objects.githubusercontent.com or release-assets.githubusercontent.com,
+// and no identifying headers beyond the user agent. Plain http is accepted only for a loopback
+// address, which the tests use.
 
 #include <cstddef>
 #include <cstdint>

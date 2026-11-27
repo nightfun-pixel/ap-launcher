@@ -229,8 +229,16 @@ void RunManifestTests() {
         CHECK(!blueward::IsAllowedDownloadUrl("https://objects.githubusercontent.com/x", why));
         CHECK(!blueward::IsAllowedDownloadUrl("http://github.com/nightfun-pixel/ap-launcher/releases/latest/download/manifest.json", why));
         CHECK(blueward::IsAllowedRedirectUrl("https://objects.githubusercontent.com/x?sig=1", why));
+        CHECK(blueward::IsAllowedRedirectUrl(
+            "https://release-assets.githubusercontent.com/github-production-release-asset/1474923047/e2f925e0-42fa-40c2-a416-3e379038d18e?sp=r&sv=2018-11-09&sr=b&sig=QSghGuGbDvVnBqIZJjn%2Boyg6WxSluHLf56ofBaX5ZJo%3D",
+            why));
         CHECK(blueward::IsAllowedRedirectUrl("https://github.com/nightfun-pixel/ap-launcher/releases/download/patch-3219598/patch-3219598.zip", why));
+        CHECK(!blueward::IsAllowedRedirectUrl("https://release-assets.githubusercontent.com.evil.example/x", why));
         CHECK(!blueward::IsAllowedRedirectUrl("https://evil.example/x", why));
+        CHECK(!blueward::IsAllowedRedirectUrl("http://release-assets.githubusercontent.com/x", why));
+        CHECK(!blueward::IsAllowedRedirectUrl("https://user:pass@release-assets.githubusercontent.com/x", why));
+        CHECK(!blueward::IsAllowedRedirectUrl("https://release-assets.githubusercontent.com:8443/x", why));
+        CHECK(!blueward::IsAllowedRedirectUrl("https://evil.example/release-assets.githubusercontent.com", why));
         CHECK(!blueward::IsAllowedRedirectUrl("http://github.com/x", why));
         CHECK(!blueward::IsAllowedRedirectUrl("https://user:pass@github.com/x", why));
     }

@@ -71,8 +71,9 @@ bool IsAllowedPatchTarget(std::string_view target, std::string& why);
 // https + github.com + exact canonical path for the manifest, launcher or patch archive.
 // A loopback address is accepted for the tests only.
 bool IsAllowedDownloadUrl(std::string_view url, std::string& why);
-// Redirects go only to github.com / objects.githubusercontent.com (or loopback in tests), HTTPS,
-// port 443, no userinfo, no fragment. A signed query is allowed on a redirect target.
+// Redirects go only to github.com, objects.githubusercontent.com or
+// release-assets.githubusercontent.com (or loopback in tests), HTTPS, port 443, no userinfo, no
+// fragment. A signed query is allowed on a redirect target.
 bool IsAllowedRedirectUrl(std::string_view url, std::string& why);
 bool IsLoopbackUrl(const std::string& url, std::string& why);
 std::string UrlHost(std::string_view url);

@@ -69,27 +69,37 @@ FeedStatus FetchFeed(HttpClient& http, std::string_view localRevision, FeedCheck
 
     std::string body;
     int status = 0;
+    bool latestMissing = false;
     if (!FetchJson(http, std::string(latestUrl), body, status, error)) {
-        out.errorCode = "E_NET";
-        out.status = FeedStatus::Error;
-        return out.status;
+        if (status == 404 || status == 410) {
+            // A release without the default manifest still serves manifest-<revision>.json; this is
+            // a missing file, not a transport failure.
+            error.clear();
+            latestMissing = true;
+        } else {
+            out.errorCode = "E_NET";
+            out.status = FeedStatus::Error;
+            return out.status;
+        }
     }
 
     Manifest latest;
     std::string parseError;
-    if (!ParseManifest(body, latest, parseError, &out.errorCode)) {
-        error = "manifest rejected: " + parseError;
-        out.status = FeedStatus::Error;
-        return out.status;
+    if (!latestMissing) {
+        if (!ParseManifest(body, latest, parseError, &out.errorCode)) {
+            error = "manifest rejected: " + parseError;
+            out.status = FeedStatus::Error;
+            return out.status;
+        }
+        out.launcherKnown = true;
+        out.launcher = latest.launcher;
     }
-    out.launcherKnown = true;
-    out.launcher = latest.launcher;
 
     if (!Digits(localRevision)) {
         out.status = FeedStatus::NoPatch;
         return out.status;
     }
-    if (latest.patch.resourceRevision == localRevision) {
+    if (!latestMissing && latest.patch.resourceRevision == localRevision) {
         out.patchManifest = std::move(latest);
         out.status = FeedStatus::Available;
         return out.status;
@@ -121,13 +131,18 @@ FeedStatus FetchFeed(HttpClient& http, std::string_view localRevision, FeedCheck
         out.status = FeedStatus::Error;
         return out.status;
     }
+    if (!out.launcherKnown) {
+        out.launcherKnown = true;
+        out.launcher = patch.launcher;
+    } else if (CompareVersions(patch.launcher.version, out.launcher.version) > 0) {
+        out.launcher = patch.launcher;
+    }
     if (patch.patch.resourceRevision != localRevision) {
         out.errorCode = "E_MANIFEST_REVISION";
         error = "manifest-" + std::string(localRevision) + ".json names revision " + patch.patch.resourceRevision;
         out.status = FeedStatus::Error;
         return out.status;
     }
-    if (CompareVersions(patch.launcher.version, out.launcher.version) > 0) out.launcher = patch.launcher;
     out.patchManifest = std::move(patch);
     out.status = FeedStatus::Available;
     return out.status;

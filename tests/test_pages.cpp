@@ -18,6 +18,12 @@ const blueward::ui::UiRow* FindRow(const blueward::ui::UiModel& model, const std
     return nullptr;
 }
 
+const blueward::ui::PlacedButton* FindPlaced(const blueward::ui::Layout& layout, const std::wstring& id) {
+    for (const blueward::ui::PlacedButton& button : layout.buttons)
+        if (button.id == id) return &button;
+    return nullptr;
+}
+
 }  // namespace
 
 void RunPageTests() {
@@ -215,6 +221,39 @@ void RunPageTests() {
         view.unfinished = true;
         const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
         CHECK(Find(model, L"recover") != nullptr);
+    }
+    {
+        // The error state gives the long primary action a full-width row at 1100x720.
+        blueward::ui::AppView view;
+        view.hasGame = true;
+        view.gamePath = L"D:\\YostarGames\\AZUPRO_JP";
+        view.gameVersion = L"1.0.2";
+        view.resourceRevision = L"3273853";
+        view.localState = blueward::LocalState::Ready;
+        view.canInstall = true;
+        view.feedChecked = true;
+        view.error = L"Сервер ответил HTTP 500";
+        view.errorCode = L"E_NET";
+        const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
+        const blueward::ui::UiButton* install = Find(model, L"install");
+        CHECK(install != nullptr);
+        CHECK(model.buttons.size() == 4);
+        const blueward::ui::Layout layout = blueward::ui::ComputeLayout(model, 1100.0f, 720.0f);
+        const blueward::ui::PlacedButton* placed = FindPlaced(layout, L"install");
+        CHECK(placed != nullptr);
+        if (install && placed) {
+            CHECK(placed->primary);
+            CHECK(placed->rect.w == layout.card.w - 56.0f);
+            CHECK(placed->rect.w > 400.0f);
+            // 14.5 px Segoe UI Semibold averages well under 9 px per Cyrillic glyph; 9.5 is a
+            // conservative bound for the 29-character label, so the width proves it is not clipped.
+            CHECK(static_cast<float>(install->label.size()) * 9.5f < placed->rect.w);
+            for (const blueward::ui::PlacedButton& other : layout.buttons) {
+                if (other.id == placed->id) continue;
+                CHECK(!(other.rect.x < placed->rect.x + placed->rect.w && other.rect.x + other.rect.w > placed->rect.x &&
+                        other.rect.y < placed->rect.y + placed->rect.h && other.rect.y + other.rect.h > placed->rect.y));
+            }
+        }
     }
     {
         // T-018: default and minimum geometry.

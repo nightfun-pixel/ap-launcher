@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/http.h"
+#include "core/version.h"
 
 void RunHttpTests() {
     {
@@ -31,7 +32,7 @@ void RunHttpTests() {
         CHECK(result.bodyBytes == body.size());
         CHECK(server.Count() == 1);
         CHECK(server.Requests()[0].Header("accept") == "application/json");
-        CHECK(server.Requests()[0].Header("user-agent").find("BLUEWARD/0.1.1") == 0);
+        CHECK(server.Requests()[0].Header("user-agent").find(std::string("BLUEWARD/") + blueward::kBluewardVersion) == 0);
         CHECK(server.Requests()[0].Header("user-agent").find("Windows NT 10.0") != std::string::npos);
         CHECK(server.Requests()[0].Header("accept-encoding") == "identity");
     }
