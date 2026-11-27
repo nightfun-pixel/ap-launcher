@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "core/config.h"
+#include "core/feed.h"
 #include "core/installer.h"
 #include "core/manifest.h"
 #include "ui/pages.h"
@@ -23,6 +24,7 @@ struct JobResult {
     bool ok = false;
     bool quit = false;          // the self-update installed a new exe and asks this one to exit
     bool refresh = true;
+    bool noPatch = false;       // the local revision has no manifest; not an error, and no write happened
     std::string code;
     std::wstring message;       // the success line or the error
 };
@@ -104,7 +106,7 @@ private:
     std::mutex checkLock_;
     bool announceCheck_ = false;
     bool checkOk_ = false;
-    Manifest checkManifest_;
+    FeedCheck checkFeed_;
     std::wstring checkError_;
 };
 

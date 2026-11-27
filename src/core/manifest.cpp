@@ -201,7 +201,7 @@ bool NumericVersion(const std::string& value) {
     std::size_t at = 0;
     while (at <= value.size()) {
         const std::size_t dot = value.find('.', at);
-        const std::string_view part = value.substr(at, dot == std::string::npos ? std::string::npos : dot - at);
+        const std::string part = value.substr(at, dot == std::string::npos ? std::string::npos : dot - at);
         if (part.empty() || part.size() > 9) return false;
         for (const char c : part)
             if (c < '0' || c > '9') return false;
@@ -336,6 +336,20 @@ bool IsCanonicalPatchUrl(std::string_view url, std::string_view revision) {
     return url == expected;
 }
 
+std::string ManifestUrlForRevision(std::string_view revision) {
+    if (!IsDigits(revision, 12)) return {};
+    std::string base = kFeedUrl;
+    const std::string suffix = "/manifest.json";
+    if (base.size() <= suffix.size() || base.compare(base.size() - suffix.size(), suffix.size(), suffix) != 0) return {};
+    base.resize(base.size() - suffix.size());
+    return base + "/manifest-" + std::string(revision) + ".json";
+}
+
+bool IsCanonicalManifestUrlForRevision(std::string_view url, std::string_view revision) {
+    const std::string expected = ManifestUrlForRevision(revision);
+    return !expected.empty() && url == expected;
+}
+
 bool IsAllowedDownloadUrl(std::string_view url, std::string& why) {
     const UrlParts parts = SplitUrl(url);
     if (!parts.valid) {
@@ -357,8 +371,14 @@ bool IsAllowedDownloadUrl(std::string_view url, std::string& why) {
         why = "the canonical launcher URL is malformed";
         return false;
     }
-    const std::string pathPrefix = repo.substr(host.size()) + "/releases/download/patch-";
     const std::string path = parts.path;
+    const std::string manifestPrefix = repo.substr(host.size()) + "/releases/latest/download/manifest-";
+    if (path.rfind(manifestPrefix, 0) == 0 && path.size() > manifestPrefix.size() + 5 &&
+        path.compare(path.size() - 5, 5, ".json") == 0) {
+        const std::string revision = path.substr(manifestPrefix.size(), path.size() - manifestPrefix.size() - 5);
+        if (IsCanonicalManifestUrlForRevision(url, revision)) return true;
+    }
+    const std::string pathPrefix = repo.substr(host.size()) + "/releases/download/patch-";
     if (path.rfind(pathPrefix, 0) == 0) {
         const std::size_t slash = path.find('/', pathPrefix.size());
         if (slash == std::string::npos) {
@@ -508,8 +528,6 @@ bool ParseManifest(std::string_view json, Manifest& out, std::string& error, std
     const Json* revision = patch->Find("resource_revision");
     if (!revision || !revision->isString() || !IsDigits(revision->asString(), 12))
         return fail("E_MANIFEST_SCHEMA", FieldError("patch.resource_revision", "must be a string of 1..12 digits"));
-    if (revision->asString() != kRequiredRevision)
-        return fail("E_MANIFEST_REVISION", FieldError("patch.resource_revision", "must be 3219598"));
     manifest.patch.resourceRevision = revision->asString();
     const Json* patchUrl = patch->Find("url");
     if (!patchUrl || !patchUrl->isString() || !IsCanonicalPatchUrl(patchUrl->asString(), manifest.patch.resourceRevision))

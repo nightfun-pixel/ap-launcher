@@ -24,6 +24,7 @@ void RunInstallerTests();
 void RunSelfUpdateTests();
 void RunSingleInstanceTests();
 void RunPageTests();
+void RunFeedTests();
 void RunLogTests();
 void RunTokenTests();
 
@@ -64,6 +65,8 @@ int main() {
     std::printf("single done\n");
     RunPageTests();
     std::printf("pages done\n");
+    RunFeedTests();
+    std::printf("feed done\n");
     RunLogTests();
     std::printf("log done\n");
     RunTokenTests();

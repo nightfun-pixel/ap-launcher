@@ -150,12 +150,31 @@ void RunManifestTests() {
         CHECK(code == "E_MANIFEST_SCHEMA");
     }
     {
-        // T-041, T-042: patch revision and URL.
+        // T-041, T-042: the revision is data, not a compiled constant.
         std::string code;
-        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"3075915\""), &code));
-        CHECK(code == "E_MANIFEST_REVISION");
+        const std::string revision3273853 = ReplaceFirst(
+            ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"3273853\""),
+            "patch-3219598/patch-3219598.zip", "patch-3273853/patch-3273853.zip");
+        blueward::Manifest parsed;
+        std::string error;
+        CHECK(blueward::ParseManifest(revision3273853, parsed, error, &code));
+        CHECK(parsed.patch.resourceRevision == "3273853");
+        CHECK(parsed.patch.files.size() == 5);
+        code.clear();
+        CHECK(Parses(ReplaceFirst(
+            ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"3075915\""),
+            "patch-3219598/patch-3219598.zip", "patch-3075915/patch-3075915.zip")));
         code.clear();
         CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": 3219598"), &code));
+        CHECK(code == "E_MANIFEST_SCHEMA");
+        code.clear();
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"\""), &code));
+        CHECK(code == "E_MANIFEST_SCHEMA");
+        code.clear();
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"12a\""), &code));
+        CHECK(code == "E_MANIFEST_SCHEMA");
+        code.clear();
+        CHECK(!Parses(ReplaceFirst(kValid, "\"resource_revision\": \"3219598\"", "\"resource_revision\": \"1234567890123\""), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
         code.clear();
         CHECK(!Parses(ReplaceFirst(kValid, "patch-3219598/patch-3219598.zip", "patch-3219598/patch-3219599.zip"), &code));
@@ -163,6 +182,16 @@ void RunManifestTests() {
         code.clear();
         CHECK(!Parses(ReplaceFirst(kValid, "\"game_version\": \"1.0.2\"", "\"game_version\": \"1.0\""), &code));
         CHECK(code == "E_MANIFEST_SCHEMA");
+    }
+    {
+        // The per-revision feed URL is canonical and derived only from the latest manifest URL.
+        const std::string fallback = blueward::ManifestUrlForRevision("3273853");
+        CHECK(fallback == "https://github.com/nightfun-pixel/ap-launcher/releases/latest/download/manifest-3273853.json");
+        std::string why;
+        CHECK(blueward::IsAllowedDownloadUrl(fallback, why));
+        CHECK(!blueward::IsAllowedDownloadUrl(fallback + "?x=1", why));
+        CHECK(!blueward::IsAllowedDownloadUrl(blueward::ManifestUrlForRevision("abc"), why));
+        CHECK(!blueward::IsAllowedDownloadUrl(blueward::ManifestUrlForRevision("1234567890123"), why));
     }
     {
         // T-036: exact keys, duplicate keys, depth, BOM, invalid UTF-8.

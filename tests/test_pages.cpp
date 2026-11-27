@@ -64,11 +64,19 @@ void RunPageTests() {
         blueward::ui::AppView view;
         view.hasGame = true;
         view.gameVersion = L"1.0.2";
-        view.resourceRevision = L"3219598";
+        view.resourceRevision = L"3273853";
+        view.requiredRevision = L"3273853";
+        view.latestPatch = L"2026.12.01-1";
+        view.feedChecked = true;
+        view.patchAvailable = true;
         view.localState = blueward::LocalState::Ready;
         view.canInstall = true;
         const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
         CHECK(model.status == blueward::msg::FromUtf8(blueward::msg::kIdleReady));
+        CHECK(model.subtitle == L"Клиент 1.0.2 · Ресурсы 3273853");
+        const blueward::ui::UiRow* check = FindRow(model, L"Проверка");
+        CHECK(check != nullptr);
+        CHECK(check && check->value == L"ресурс 3273853");
         const blueward::ui::UiButton* install = Find(model, L"install");
         CHECK(install != nullptr);
         CHECK(install && install->enabled);
@@ -77,11 +85,38 @@ void RunPageTests() {
         CHECK(restore && !restore->enabled);
     }
     {
+        // A local revision without a published manifest disables install and keeps self-update alive.
+        blueward::ui::AppView view;
+        view.hasGame = true;
+        view.gameVersion = L"1.0.2";
+        view.resourceRevision = L"3273853";
+        view.localState = blueward::LocalState::Ready;
+        view.canInstall = false;
+        view.feedChecked = true;
+        view.patchAvailable = false;
+        view.noPatch = true;
+        view.launcherUpdate = true;
+        view.latestLauncher = L"0.1.1";
+        const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
+        CHECK(model.status == blueward::msg::NoPatch(L"3273853"));
+        const blueward::ui::UiRow* check = FindRow(model, L"Проверка");
+        CHECK(check != nullptr);
+        CHECK(check && check->value == L"Патч не выпущен для 3273853");
+        const blueward::ui::UiButton* install = Find(model, L"install");
+        CHECK(install != nullptr);
+        CHECK(install && !install->enabled);
+        const blueward::ui::UiButton* update = Find(model, L"update");
+        CHECK(update != nullptr);
+        CHECK(update && update->enabled);
+        CHECK(model.subtitle.find(L"3219598") == std::wstring::npos);
+        CHECK(model.status.find(L"3219598") == std::wstring::npos);
+    }
+    {
         // T-019: an installed translation -> Installed and an enabled restore button.
         blueward::ui::AppView view;
         view.hasGame = true;
         view.gameVersion = L"1.0.2";
-        view.resourceRevision = L"3219598";
+        view.resourceRevision = L"3273853";
         view.localState = blueward::LocalState::Installed;
         view.canInstall = true;
         view.installed = true;
@@ -100,8 +135,8 @@ void RunPageTests() {
         view.hasGame = true;
         view.gamePath = L"D:\\YostarGames\\AZUPRO_JP";
         view.gameVersion = L"1.0.2";
-        view.resourceRevision = L"3219598";
-        view.requiredRevision = L"3219598";
+        view.resourceRevision = L"3273853";
+        view.requiredRevision = L"3273853";
         view.installed = true;
         view.installedVersion = L"2026.11.27-1";
         view.installedAt = L"2026-11-27T20:00:00Z";

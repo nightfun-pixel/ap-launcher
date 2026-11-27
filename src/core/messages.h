@@ -6,8 +6,6 @@
 
 namespace blueward::msg {
 
-inline constexpr const char* kVersion = "Сначала обновите игру до 3219598 — запустите игру и пройдите загрузку на первом экране. Файлы не изменены.";
-inline constexpr const char* kManifestRevision = "Этот выпуск BLUEWARD работает только с ресурсом 3219598. Обновите BLUEWARD.";
 inline constexpr const char* kRestoreNone = "Оригинал уже возвращён.";
 inline constexpr const char* kAlreadyInstalled = "Уже установлено";
 inline constexpr const char* kGameRunning = "Закройте игру: AzurPromiliaJP.exe уже запущен.";
@@ -17,7 +15,8 @@ inline constexpr const char* kGameInvalid = "В выбранной папке н
 inline constexpr const char* kIdleReady = "Готово к установке";
 inline constexpr const char* kIdleNoGame = "Игра не найдена";
 inline constexpr const char* kIdleInstalled = "Перевод установлен";
-inline constexpr const char* kNeedsGameUpdate = "Сначала обновите игру до 3219598 — пройдите загрузку на первом экране";
+inline constexpr const char* kRevisionUnknown = "Ревизия ресурсов не определена — запустите игру и пройдите загрузку на первом экране.";
+inline constexpr const char* kNeedsGameUpdate = "Ревизия ресурсов не определена — пройдите загрузку на первом экране";
 inline constexpr const char* kChecking = "Проверяем обновления…";
 inline constexpr const char* kPreflight = "Проверяем файлы игры…";
 inline constexpr const char* kDownloading = "Скачиваем патч…";
@@ -73,6 +72,17 @@ inline std::wstring FromUtf8(const char* text) {
         }
     }
     return out;
+}
+
+inline std::wstring RevisionUpdate(const std::wstring& revision) {
+    return L"Сначала обновите игру до " + revision +
+           L" — запустите игру и пройдите загрузку на первом экране. Файлы не изменены.";
+}
+inline std::wstring NoPatch(const std::wstring& revision) {
+    return revision.empty() ? L"Патч для этой ревизии ещё не выпущен" : L"Патч для ревизии " + revision + L" ещё не выпущен";
+}
+inline std::wstring NoPatchRow(const std::wstring& revision) {
+    return revision.empty() ? L"Патч не выпущен" : L"Патч не выпущен для " + revision;
 }
 
 inline std::wstring GateDetailMissing(const std::wstring& basename) { return L"Не найден файл: " + basename + L"."; }

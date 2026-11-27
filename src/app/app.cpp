@@ -38,7 +38,9 @@ std::wstring PhaseStatus(int phase) {
     }
 }
 
-std::wstring GateMessage(const std::wstring& detail) { return msg::FromUtf8(msg::kVersion) + L" " + detail; }
+std::wstring GateMessage(const InstallPlan& plan, const std::wstring& detail) {
+    return msg::RevisionUpdate(Widen(plan.resourceRevision)) + L" " + detail;
+}
 
 bool OpenFolderSelect(const std::wstring& path) {
     PIDLIST_ABSOLUTE item = ILCreateFromPathW(path.c_str());
@@ -117,7 +119,16 @@ void App::RefreshState() {
     view_.hasGame = !config_.gamePath.empty() && IsGameDir(config_.gamePath);
     view_.gamePath = config_.gamePath;
     view_.gameVersion = view_.hasGame ? ReadGameVersion(config_.gamePath) : std::wstring();
-    view_.resourceRevision = view_.hasGame ? LocalResourceRevision(config_.gamePath) : std::wstring();
+    const std::wstring revision = view_.hasGame ? LocalResourceRevision(config_.gamePath) : std::wstring();
+    if (revision != view_.resourceRevision) {
+        view_.feedChecked = false;
+        view_.feedChecking = false;
+        view_.patchAvailable = false;
+        view_.noPatch = false;
+        view_.requiredRevision.clear();
+        view_.latestPatch.clear();
+    }
+    view_.resourceRevision = revision;
     std::string installed;
     std::wstring installedAt;
     view_.installed = InstalledVersion(stateDir_, installed, &installedAt);
@@ -129,7 +140,7 @@ void App::RefreshState() {
     view_.telegram = TelegramEnabled(config_.telegramUrl) ? Widen(config_.telegramUrl) : std::wstring();
     const LocalGate gate = EvaluateLocalState(config_.gamePath, stateDir_);
     view_.localState = gate.state;
-    view_.canInstall = gate.canInstall;
+    view_.canInstall = gate.canInstall && !view_.noPatch && !(view_.feedChecked && !view_.patchAvailable);
     view_.gateDetail = gate.detail;
     view_.gateCode = Widen(gate.code);
     if (gate.detail != lastGateDetail_) {
@@ -179,7 +190,18 @@ void App::TakeJobResult(JobResult* result) {
     cancel_ = false;
     view_.job = ui::Job::None;
     view_.progress = 0.0;
-    if (!result->message.empty()) {
+    if (result->noPatch) {
+        view_.feedChecked = true;
+        view_.patchAvailable = false;
+        view_.noPatch = true;
+        view_.canInstall = false;
+        view_.requiredRevision.clear();
+        view_.latestPatch.clear();
+        view_.updateAvailable = false;
+        view_.status = result->message;
+        view_.error.clear();
+        view_.errorCode.clear();
+    } else if (!result->message.empty()) {
         if (result->ok) {
             view_.status = result->message;
             view_.error.clear();
@@ -201,17 +223,40 @@ void App::TakeJobResult(JobResult* result) {
 
 void App::TakeCheckResult() {
     std::lock_guard lock(checkLock_);
+    view_.feedChecking = false;
     if (checkOk_) {
-        view_.requiredRevision = Widen(checkManifest_.patch.resourceRevision);
-        view_.latestPatch = Widen(checkManifest_.patch.version);
-        view_.latestLauncher = Widen(checkManifest_.launcher.version);
-        view_.launcherUpdate = ShouldUpdate(kBluewardVersion, checkManifest_.launcher);
-        if (view_.installed)
-            view_.updateAvailable = CompareVersions(checkManifest_.patch.version, Narrow(view_.installedVersion)) > 0;
+        view_.feedChecked = true;
+        if (checkFeed_.launcherKnown) {
+            view_.latestLauncher = Widen(checkFeed_.launcher.version);
+            view_.launcherUpdate = ShouldUpdate(kBluewardVersion, checkFeed_.launcher);
+        }
+        if (!view_.hasGame || checkFeed_.localRevision != Narrow(view_.resourceRevision)) {
+            view_.feedChecked = false;
+            return;
+        }
+        if (checkFeed_.status == FeedStatus::Available) {
+            view_.patchAvailable = true;
+            view_.noPatch = false;
+            view_.requiredRevision = Widen(checkFeed_.patchManifest.patch.resourceRevision);
+            view_.latestPatch = Widen(checkFeed_.patchManifest.patch.version);
+            view_.canInstall = view_.localState == LocalState::Ready || view_.localState == LocalState::Installed;
+            if (view_.installed)
+                view_.updateAvailable =
+                    CompareVersions(checkFeed_.patchManifest.patch.version, Narrow(view_.installedVersion)) > 0;
+        } else {
+            view_.patchAvailable = false;
+            view_.noPatch = true;
+            view_.canInstall = false;
+            view_.requiredRevision.clear();
+            view_.latestPatch.clear();
+            view_.updateAvailable = false;
+            view_.status = msg::NoPatch(Widen(checkFeed_.localRevision));
+        }
     } else if (announceCheck_) {
         view_.error = checkError_.empty() ? L"Не удалось проверить обновления." : checkError_;
         view_.errorCode = L"E_NET";
     }
+    if (window_) window_->Invalidate();
 }
 
 void App::StartInstall() {
@@ -252,16 +297,18 @@ void App::StartInstall() {
             result->code = IsProcessRunning(kGameLauncherExe) ? "E_LAUNCHER_RUNNING" : "E_GAME_RUNNING";
             result->message = msg::FromUtf8(IsProcessRunning(kGameLauncherExe) ? msg::kLauncherRunning : msg::kGameRunning);
         } else {
-            std::string body;
-            Manifest manifest;
             std::string code;
-            if (!FetchText(http, kFeedUrl, static_cast<std::size_t>(kManifestLimit), body, error)) {
-                result->code = "E_NET";
+            FeedCheck feed;
+            const FeedStatus feedStatus = FetchFeed(http, Narrow(LocalResourceRevision(gameDir)), feed, error);
+            if (feedStatus == FeedStatus::Error) {
+                result->code = feed.errorCode.empty() ? "E_NET" : feed.errorCode;
                 message = L"Не удалось получить список обновлений: " + Widen(error);
-            } else if (!ParseManifest(body, manifest, error, &code)) {
-                result->code = code;
-                message = L"Список обновлений отклонён: " + Widen(error);
+            } else if (feedStatus == FeedStatus::NoPatch) {
+                ok = true;
+                result->noPatch = true;
+                message = msg::NoPatch(Widen(feed.localRevision));
             } else {
+                const Manifest& manifest = feed.patchManifest;
                 InstallPlan plan;
                 if (!BuildPlan(manifest, gameDir, plan, error)) {
                     result->code = plan.errorCode.empty() ? "E_TARGET" : plan.errorCode;
@@ -275,7 +322,7 @@ void App::StartInstall() {
                     const GateResult gate = CheckBefore(plan, stateDir_, detail, &code);
                     if (gate != GateResult::Ok) {
                         result->code = "E_VERSION_BEFORE";
-                        message = GateMessage(detail);
+                        message = GateMessage(plan, detail);
                     } else if (GameProcessesRunning(IsProcessRunning)) {
                         result->code = IsProcessRunning(kGameLauncherExe) ? "E_LAUNCHER_RUNNING" : "E_GAME_RUNNING";
                         message = msg::FromUtf8(IsProcessRunning(kGameLauncherExe) ? msg::kLauncherRunning : msg::kGameRunning);
@@ -501,18 +548,18 @@ void App::CheckFeed(bool announce) {
         std::lock_guard lock(checkLock_);
         announceCheck_ = announce;
     }
-    checkThread_ = std::thread([this] {
+    const std::wstring local = LocalResourceRevision(config_.gamePath);
+    view_.feedChecking = true;
+    checkThread_ = std::thread([this, local] {
         WinHttpClient http;
-        std::string body, error;
-        Manifest manifest;
-        std::string code;
-        const bool ok = FetchText(http, kFeedUrl, static_cast<std::size_t>(kManifestLimit), body, error) &&
-                        ParseManifest(body, manifest, error, &code);
+        std::string error;
+        FeedCheck feed;
+        const FeedStatus status = FetchFeed(http, Narrow(local), feed, error);
         {
             std::lock_guard lock(checkLock_);
-            checkOk_ = ok;
-            checkManifest_ = std::move(manifest);
-            checkError_ = ok ? std::wstring() : (error.empty() ? L"Не удалось проверить обновления." : Widen(error));
+            checkOk_ = status != FeedStatus::Error;
+            checkFeed_ = std::move(feed);
+            checkError_ = checkOk_ ? std::wstring() : (error.empty() ? L"Не удалось проверить обновления." : Widen(error));
         }
         checkBusy_ = false;
         if (window_ && window_->hwnd()) PostMessageW(window_->hwnd(), kMsgCheckDone, 0, 0);
@@ -533,6 +580,13 @@ void App::SaveSettings() {
 
 void App::SetGamePath(const std::wstring& path) {
     config_.gamePath = path;
+    view_.feedChecked = false;
+    view_.feedChecking = false;
+    view_.patchAvailable = false;
+    view_.noPatch = false;
+    view_.requiredRevision.clear();
+    view_.latestPatch.clear();
+    view_.updateAvailable = false;
     SaveSettings();
     RefreshState();
     LogInfo(L"папка игры: " + path);

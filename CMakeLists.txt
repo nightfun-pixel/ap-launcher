@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Blueward VERSION 0.1.0 LANGUAGES C CXX)
+project(Blueward VERSION 0.1.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -64,6 +64,7 @@ add_library(blueward_core STATIC
   src/core/config.cpp
   src/core/download.cpp
   src/core/errors.cpp
+  src/core/feed.cpp
   src/core/fileio.cpp
   src/core/gamepath.cpp
   src/core/http.cpp
@@ -117,6 +118,7 @@ add_executable(blueward_tests
   tests/test_self_update.cpp
   tests/test_single_instance.cpp
   tests/test_pages.cpp
+  tests/test_feed.cpp
   tests/test_log.cpp
   tests/test_tokens.cpp
   src/app/single_instance.cpp

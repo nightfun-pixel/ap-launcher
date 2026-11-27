@@ -20,7 +20,11 @@ struct AppView {
     std::wstring gamePath;
     std::wstring gameVersion;
     std::wstring resourceRevision;
-    std::wstring requiredRevision;  // from the feed, e.g. 3219598
+    std::wstring requiredRevision;  // patch revision from the feed; empty when no patch exists
+    bool feedChecked = false;
+    bool feedChecking = false;
+    bool patchAvailable = false;
+    bool noPatch = false;
     bool installed = false;
     std::wstring installedVersion;
     std::wstring installedAt;

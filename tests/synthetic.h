@@ -65,6 +65,38 @@ struct Synthetic {
     std::vector<std::string> after;
 };
 
+inline std::string SerializeManifest(const blueward::Manifest& manifest) {
+    blueward::Json files = blueward::Json::Array();
+    for (const blueward::PatchFile& file : manifest.patch.files) {
+        blueward::Json entry = blueward::Json::Object();
+        entry.Set("source", blueward::Json::String(file.source));
+        entry.Set("target", blueward::Json::String(file.target));
+        entry.Set("before_sha256", blueward::Json::String(file.beforeSha256));
+        entry.Set("before_size", blueward::Json::Int(static_cast<std::int64_t>(file.beforeSize)));
+        entry.Set("sha256", blueward::Json::String(file.sha256));
+        entry.Set("size", blueward::Json::Int(static_cast<std::int64_t>(file.size)));
+        files.Push(std::move(entry));
+    }
+    blueward::Json patch = blueward::Json::Object();
+    patch.Set("version", blueward::Json::String(manifest.patch.version));
+    patch.Set("game_version", blueward::Json::String(manifest.patch.gameVersion));
+    patch.Set("resource_revision", blueward::Json::String(manifest.patch.resourceRevision));
+    patch.Set("url", blueward::Json::String(manifest.patch.url));
+    patch.Set("sha256", blueward::Json::String(manifest.patch.sha256));
+    patch.Set("size", blueward::Json::Int(static_cast<std::int64_t>(manifest.patch.size)));
+    patch.Set("files", std::move(files));
+    blueward::Json launcher = blueward::Json::Object();
+    launcher.Set("version", blueward::Json::String(manifest.launcher.version));
+    launcher.Set("url", blueward::Json::String(manifest.launcher.url));
+    launcher.Set("sha256", blueward::Json::String(manifest.launcher.sha256));
+    launcher.Set("size", blueward::Json::Int(static_cast<std::int64_t>(manifest.launcher.size)));
+    blueward::Json document = blueward::Json::Object();
+    document.Set("schema", blueward::Json::Int(1));
+    document.Set("launcher", std::move(launcher));
+    document.Set("patch", std::move(patch));
+    return blueward::DumpJson(document);
+}
+
 // Builds <root>\AZUPRO_JP with the game marker, the version files and the five original targets,
 // plus <root>\patch.zip and a parsed manifest that describes them.
 inline bool Build(const std::wstring& root, const std::wstring& revision, Synthetic& out, std::string& error) {
@@ -151,36 +183,7 @@ inline bool Build(const std::wstring& root, const std::wstring& revision, Synthe
     out.manifest.patch.size = blueward::FileSize(out.zipPath);
     blueward::Sha256File(out.zipPath, out.manifest.patch.sha256);
 
-    blueward::Json files = blueward::Json::Array();
-    for (const blueward::PatchFile& file : out.manifest.patch.files) {
-        blueward::Json entry = blueward::Json::Object();
-        entry.Set("source", blueward::Json::String(file.source));
-        entry.Set("target", blueward::Json::String(file.target));
-        entry.Set("before_sha256", blueward::Json::String(file.beforeSha256));
-        entry.Set("before_size", blueward::Json::Int(static_cast<std::int64_t>(file.beforeSize)));
-        entry.Set("sha256", blueward::Json::String(file.sha256));
-        entry.Set("size", blueward::Json::Int(static_cast<std::int64_t>(file.size)));
-        files.Push(std::move(entry));
-    }
-    blueward::Json patch = blueward::Json::Object();
-    patch.Set("version", blueward::Json::String(out.manifest.patch.version));
-    patch.Set("game_version", blueward::Json::String(out.manifest.patch.gameVersion));
-    patch.Set("resource_revision", blueward::Json::String(out.manifest.patch.resourceRevision));
-    patch.Set("url", blueward::Json::String(out.manifest.patch.url));
-    patch.Set("sha256", blueward::Json::String(out.manifest.patch.sha256));
-    patch.Set("size", blueward::Json::Int(static_cast<std::int64_t>(out.manifest.patch.size)));
-    patch.Set("files", std::move(files));
-    blueward::Json launcher = blueward::Json::Object();
-    launcher.Set("version", blueward::Json::String(out.manifest.launcher.version));
-    launcher.Set("url", blueward::Json::String(out.manifest.launcher.url));
-    launcher.Set("sha256", blueward::Json::String(out.manifest.launcher.sha256));
-    launcher.Set("size", blueward::Json::Int(static_cast<std::int64_t>(out.manifest.launcher.size)));
-    blueward::Json document = blueward::Json::Object();
-    document.Set("schema", blueward::Json::Int(1));
-    document.Set("launcher", std::move(launcher));
-    document.Set("patch", std::move(patch));
-
-    const std::string manifestText = blueward::DumpJson(document);
+    const std::string manifestText = SerializeManifest(out.manifest);
     {
         std::string writeError;
         if (!blueward::WriteFileAtomic(root + L"\\manifest.json", manifestText, writeError)) {
@@ -195,16 +198,20 @@ inline bool Build(const std::wstring& root, const std::wstring& revision, Synthe
     blueward::Manifest parsed;
     std::string parseError;
     if (!blueward::ParseManifest(manifestText, parsed, parseError)) {
-        // A fixture at another revision is intentionally rejected by the normative parser; the
-        // test that needs that tree overrides the revision itself.
-        if (blueward::Narrow(revision) == blueward::kRequiredRevision) {
-            error = parseError;
-            return false;
-        }
-    } else {
-        out.manifest = parsed;
+        error = parseError;
+        return false;
     }
+    out.manifest = parsed;
     return true;
+}
+
+inline std::wstring BuiltinVersionPath(const std::wstring& gameDir, const std::wstring& package, const std::wstring& revision) {
+    return gameDir + L"\\AzurPromiliaJP_Data\\StreamingAssets\\.res\\" + package + L"\\0release_" + package + L"_" + revision +
+           L".version";
+}
+
+inline std::wstring DeltaManifestPath(const std::wstring& gameDir, const std::wstring& package, const std::wstring& revision) {
+    return gameDir + L"\\AzurPromiliaJP_Data\\.res\\" + package + L"\\ManifestFiles\\0release_" + package + L"_" + revision + L".bytes";
 }
 
 // Rewrites one target with arbitrary bytes (to test the before gate).

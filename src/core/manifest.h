@@ -17,7 +17,6 @@ inline constexpr const char* kFeedUrl =
 inline constexpr const char* kLauncherExeUrl =
     "https://github.com/nightfun-pixel/ap-launcher/releases/latest/download/BLUEWARD.exe";
 
-inline constexpr const char* kRequiredRevision = "3219598";
 inline constexpr std::uint64_t kManifestLimit = 262144;
 inline constexpr std::uint64_t kLauncherSizeLimit = 67108864;
 inline constexpr std::uint64_t kArchiveSizeLimit = 2147483648ull;
@@ -83,6 +82,9 @@ bool IsCanonicalManifestUrl(std::string_view url);
 bool IsCanonicalPatchUrl(std::string_view url, std::string_view revision);
 
 std::string ResolveUrl(std::string_view base, std::string_view relative);
+// The per-revision feed beside the latest manifest: .../releases/latest/download/manifest-<rev>.json.
+std::string ManifestUrlForRevision(std::string_view revision);
+bool IsCanonicalManifestUrlForRevision(std::string_view url, std::string_view revision);
 int CompareVersions(std::string_view a, std::string_view b);  // 1.0.10 > 1.0.9
 
 // True when the value is numeric x.y.z (each part digits, no leading zero unless "0").

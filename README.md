@@ -4,13 +4,24 @@
 
 BLUEWARD is a Win32 + Direct2D launcher and patcher for the Japanese PC client of **Azur Promilia 1.0.2**. It replaces five resource files inside the game with a Russian translation archive published in this repository's releases, and puts the original files back on demand. It is an unofficial fan tool, not affiliated with Yostar or Gryphline. It uses no account, sends no telemetry, and does not interact with the anti-cheat.
 
-Product version `0.1.0`; target game `1.0.2`, resource revision `3219598`.
+Product version `0.1.1`; target game `1.0.2`. The resource revision is detected from the installed game, not compiled in: the launcher reads builtin and delta manifests and uses the highest revision it finds.
 
 ## How it works
 
 The launcher is one x64 GUI executable, `BLUEWARD.exe`, built as C++20/Win32 with the static MSVC runtime. The shell is Direct3D 11 + Direct2D 1.1 + DirectWrite. Official release builds embed an H.264 MP4 (`RT_RCDATA` 101, 4,128,422 bytes) played through Media Foundation, with no audio stream selected. The clip is official promotional media and is **not stored in this repository**; a source-only build omits it and keeps the gradient background. The video pauses when the window is minimized or loses foreground and resumes when active.
 
-The update feed is one schema-1 manifest at the canonical release URL. It names the launcher executable, one patch ZIP, and exactly five payloads with two identities each: the file that must already be at the target (`before_size`, `before_sha256`) and the file that replaces it (`size`, `sha256`). Nothing is written to the game until both identities and the local resource revision have been checked.
+The update feed is a schema-1 manifest at the canonical release URL. It names the launcher executable, one patch ZIP, and exactly five payloads with two identities each: the file that must already be at the target (`before_size`, `before_sha256`) and the file that replaces it (`size`, `sha256`). Nothing is written to the game until both identities and the local resource revision have been checked. If the latest manifest's `patch.resource_revision` differs from the local revision, the launcher fetches `manifest-<localRevision>.json` beside it before concluding that no patch exists. The launcher block is parsed and offered independently, so a compatibility manifest may keep an older patch while shipping a newer client.
+
+The publication convention is one Latest release with:
+
+| Asset | Meaning |
+| --- | --- |
+| `manifest.json` | the current default manifest; its patch block is the newest patch that existing clients can parse |
+| `manifest-<rev>.json` | the patch manifest for exactly resource revision `<rev>`; uploaded to the same Latest release |
+| `BLUEWARD.exe` | the current launcher |
+| `patch-<rev>` tag | the patch archive for `<rev>`, at `releases/download/patch-<rev>/patch-<rev>.zip` |
+
+A revision that has no `manifest-<rev>.json` is a normal no-patch state: the launcher says `Патч для ревизии <rev> ещё не выпущен`, disables install, and writes nothing.
 
 All user-visible strings are Russian and come from `src/core/messages.h`; error codes are stable and deterministic.
 
@@ -24,7 +35,7 @@ Toolchain used and verified: MSVC 19.44 (Visual Studio 2022 Build Tools), CMake 
 
 `build.cmd` runs `vswhere`, `vcvars64.bat`, configures CMake/Ninja in `Release` with the static CRT, builds `--clean-first`, runs `build\blueward_tests.exe`, and copies the result to `dist\BLUEWARD.exe`. A bare `cmake --build` outside a `vcvars64` shell fails to find the Windows headers; use the script. The background clip is not in the source tree: `build.cmd` detects its absence and builds the gradient-only variant. To reproduce the official artifact, place the clip at `res/bg/bg-720.mp4` (SHA-256 `3C57F682…C7015B`, 4,128,422 bytes) before building.
 
-The build is warning-free with `/W4 /permissive- /utf-8`. The executable has no `VCRUNTIME140.dll`, `MSVCP140.dll` or `d3dcompiler_*.dll` dependency. Official release artifact with the clip: 5,070,336 bytes; a source-only build without the clip is smaller and has a different hash.
+The build is warning-free with `/W4 /permissive- /utf-8`. The executable has no `VCRUNTIME140.dll`, `MSVCP140.dll` or `d3dcompiler_*.dll` dependency. Official release artifact with the clip: 5,093,376 bytes, SHA-256 `4023ED5637527FB55A3F078EFDD67679DFFA6B05AAC1EDE614EA7287AE9666C4`; a source-only build without the clip is smaller and has a different hash.
 
 ## Run
 
@@ -56,26 +67,23 @@ On first start the launcher reads `%LOCALAPPDATA%\BLUEWARD\config.json`, auto-de
 
 ## Patch targets
 
-The five targets are game-root-relative and are produced by the Studio publisher, never hardcoded from payload names:
-
-| Payload | Target relative to the game root |
-| --- | --- |
-| `vstring.bytes` | `AzurPromiliaJP_Data/.res/raw_base_package/BundleFiles/z5xzl3cg6ao0ilpbzykexg.r` |
-| `table_data.bytes` | `AzurPromiliaJP_Data/.res/raw_streaming_package/BundleFiles/fcl0wxz2z6hoffogv4xgzw.r` |
-| `static-text.r` | `AzurPromiliaJP_Data/.res/default_package/BundleFiles/yr49bxop0f3reujfsmyfca.r` |
-| `startup.r` | `AzurPromiliaJP_Data/StreamingAssets/.res/static_package/6pq4a7hlp7zidu91dvvww.r` |
-| `onest-font.r` | `AzurPromiliaJP_Data/StreamingAssets/.res/default_package/hqqoy0ojvzpggukcf5m85w.r` |
-
-Resolution tries the exact path first. Only if it is absent, the launcher searches Res root A (`AzurPromiliaJP_Data\.res`) then Res root B (`AzurPromiliaJP_Data\StreamingAssets\.res`) for a regular file with the same basename; exactly one match across both roots is required. Reparse points, `.apbak` files, depth beyond 8, more than 200,000 entries and more than 15 seconds abort the resolution. The journal records whether the exact path or which root was used.
+The five targets are read only from `patch.files[]` in the fetched manifest: `target`, `before_size`, `before_sha256`, `size`, and `sha256`. There is no compiled target table or baseline; a new resource revision needs a new manifest, not a new launcher. The parser requires exactly five entries, unique sources and targets, safe relative paths under `AzurPromiliaJP_Data/`, and sizes and hashes in range. Resolution tries each exact target path first. Only if it is absent, the launcher searches Res root A (`AzurPromiliaJP_Data\.res`) then Res root B (`AzurPromiliaJP_Data\StreamingAssets\.res`) for a regular file with the same basename; exactly one match across both roots is required. Reparse points, `.apbak` files, depth beyond 8, more than 200,000 entries and more than 15 seconds abort the resolution. The journal records whether the exact path or which root was used.
 
 ## Version gate
 
-The launcher reads the local resource revision from exactly one `*.version` file in `default_package` under Res root B, cross-checked against Res root A, falling back to `raw_base_package`; `static_package` is never used (it stays at `3075915` at the 3219598 baseline). If the revision is known and not `3219598`, the job stops before any download or write.
+The local revision is the highest numeric revision found in either place:
 
-Gate B then checks all five resolved targets in manifest order: size first, then SHA-256, against `before_*`. Any missing, wrong-size or wrong-hash file stops the job with:
+| Source | Path |
+| --- | --- |
+| builtin | `AzurPromiliaJP_Data\StreamingAssets\.res\<pkg>\0release_<pkg>_<rev>.version` |
+| delta | `AzurPromiliaJP_Data\.res\<pkg>\ManifestFiles\0release_<pkg>_<rev>.bytes` |
+
+Each package contributes at most one candidate. A second release file, or a `.version` whose content disagrees with its filename, makes the result invalid rather than silently selecting an older revision. A builtin `3075915` plus a delta `3273853` therefore reports `3273853` from the delta. `AzurPromiliaJP_Data\.res` is optional. The game folder is still valid when it contains `AzurPromiliaJP.exe` and `AzurPromiliaJP_Data\StreamingAssets\.res`.
+
+If the local revision has no manifest, the launcher shows `Патч для ревизии <rev> ещё не выпущен`, disables install, and writes nothing; self-update remains available because the launcher block is independent of the patch block. If a manifest exists, Gate B checks all five resolved targets in manifest order: size first, then SHA-256, against `before_*`. Any missing, wrong-size or wrong-hash file stops the job with:
 
 ```text
-Сначала обновите игру до 3219598 — запустите игру и пройдите загрузку на первом экране. Файлы не изменены.
+Сначала обновите игру до <rev> — запустите игру и пройдите загрузку на первом экране. Файлы не изменены.
 ```
 
 and exactly one detail: `Не найден файл: <basename>.`, `Не совпадает размер: <basename> (ожидалось <n> Б, получено <m> Б).`, or `Не совпадает SHA-256: <basename>.`. A change detected after the download uses `Файл изменился во время установки: <basename>.`. A managed re-install may satisfy the gate from `install.json` plus a matching `.apbak`.
@@ -106,7 +114,7 @@ Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe`
 
 ## Network
 
-Initial requests are only the three canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs (manifest, `BLUEWARD.exe`, `patch-<revision>.zip`). Redirects are followed at most five times and only to `github.com` or `objects.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.0 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
+Initial requests are only the canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs: the latest manifest, `manifest-<revision>.json`, `BLUEWARD.exe`, and `patch-<revision>.zip`. Redirects are followed at most five times and only to `github.com` or `objects.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.1 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
 
 ## Tests
 
@@ -115,7 +123,7 @@ build.cmd
 & "C:\Program Files\CMake\bin\ctest.exe" --test-dir build --output-on-failure
 ```
 
-Current result: **752 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real install at `D:\YostarGames\AZUPRO_JP`. It covers:
+Current result: **955 checks, 0 failed**. CTest name `core`. The suite runs headless, uses only `%TEMP%\blueward-tests-<pid>-<n>`, a loopback HTTP server and a synthetic `AZUPRO_JP` tree; it never opens or writes the real installed game. It covers:
 
 | Area | Checks |
 | --- | --- |
@@ -124,7 +132,8 @@ Current result: **752 checks, 0 failed**. CTest name `core`. The suite runs head
 | Resumable `.part`, 206/200/416, hash mismatch deletion, cancel, retry | `tests/test_download.cpp` |
 | ZIP store/deflate, 5/6/7/4/0 entries, traversal, Unicode, directory, symlink, encryption, CRC, ZIP64, truncation, duplicates | `tests/test_zip.cpp` |
 | Target resolution, fallback, ambiguity, revision gate, before gate, managed reinstall, install/rollback/restore, partial restore | `tests/test_installer.cpp` |
-| Game detection, normalized paths, version detection, process probes | `tests/test_gamepath.cpp` |
+| Game detection, normalized paths, version detection, builtin/delta revision detection, process probes | `tests/test_gamepath.cpp` |
+| Latest/fallback manifest selection, 404 no-patch state, independent launcher update | `tests/test_feed.cpp` |
 | Config defaults/round-trip/corrupt rename, Telegram validation, log rotation/format/sanitisation | `tests/test_config.cpp`, `test_log.cpp` |
 | Self-update versioning, file handoff, rollback, cleanup, manifest level read | `tests/test_self_update.cpp` |
 | Single instance, page models, exact UI states, geometry | `tests/test_single_instance.cpp`, `test_pages.cpp` |
@@ -149,7 +158,7 @@ The GitHub owner name contains the literal that the donor-purge scan forbids. It
 
 ## Known gaps
 
-- The local install is at resource `3075915`; the three 3219598 Res root A targets do not exist until the game's first-screen download completes. The real install cannot pass the gate before that, by design. All install/restore testing used a synthetic tree.
+- The local tree has builtin `3075915` and delta `3273853`; the launcher reports `3273853`. No `3273853` manifest is published yet, so the UI stays in the no-patch state until the packer uploads `manifest-3273853.json`. All install/restore testing used a synthetic tree.
 - The live window was built and resource-inspected, but the manual video/DPI/keyboard tests (T-006, T-008, T-009, T-018) have not been run on a desktop.
 - TLS loopback with self-signed/expired/wrong-host certificates (T-047) and capture-proxy instrumentation (T-052, T-058, T-125) are not automated; WinHTTP keeps validation on by default.
 - Elevation comparison is implemented and the `asInvoker` path is tested; a `requireAdministrator` fixture (T-120) and real UAC runs (T-023, T-119) are manual.

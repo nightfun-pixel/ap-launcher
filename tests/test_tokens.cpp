@@ -168,4 +168,13 @@ void RunTokenTests() {
         CHECK_MSG(found.empty(), blueward::Narrow(path) + " contains: " + found);
     }
     CHECK(scanned > 20);
+    {
+        // The product code carries no compiled revision: every revision is data from the game or feed.
+        const std::string revision = "3219598";
+        std::vector<std::wstring> product;
+        Walk(std::wstring(BLUEWARD_SOURCE_DIR) + L"\\src", product);
+        CHECK(product.size() > 20);
+        for (const std::wstring& path : product)
+            CHECK_MSG(ReadAll(path).find(revision) == std::string::npos, blueward::Narrow(path) + " hardcodes the revision");
+    }
 }

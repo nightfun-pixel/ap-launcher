@@ -2,7 +2,7 @@
 
 # Test gaps
 
-`launcher-spec/TESTS.md` defines T-001…T-139. The CTest suite (`build\blueward_tests.exe`, 752 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
+`launcher-spec/TESTS.md` defines T-001…T-139. The CTest suite (`build\blueward_tests.exe`, 955 checks) automates the mechanical part. This page lists what it does not automate, so a green run is not read as full coverage.
 
 ## Covered headlessly
 
@@ -11,7 +11,8 @@
 | Source token gate, no API host | T-002 |
 | Config, Telegram, log rotation/format | T-013, T-014, T-016 |
 | Page models and exact UI states | T-019, T-020 (model only), T-021 (model only) |
-| Game discovery, path rejection, version detection | T-024, T-025, T-026, T-027, T-029, T-030 |
+| Game discovery, path rejection, version detection, builtin/delta revision selection | T-024, T-025, T-026, T-027, T-029, T-030 |
+| Latest/fallback manifest selection, 404 no-patch state, independent launcher update | T-017 (feed), T-032 (model) |
 | Manifest schema, limits, targets, hashes, canonical URLs | T-035, T-036, T-037, T-038, T-039, T-040, T-041 |
 | HTTP loopback, URL allowlist, redirect refusal, truncated body | T-043 (partial), T-045 (partial), T-046 (partial), T-052 (UA and encoding only) |
 | Resumable download, 206/200/416, hash deletion | T-055, T-056 |
@@ -35,8 +36,8 @@
 | T-017, T-092 | Second-instance activation and per-game mutex contention | Unit test covers the named mutex; the UI activation and 30 s wait need two real processes. |
 | T-022 | Process watcher updating the idle UI | The process probe is tested; the polling UI is manual. |
 | T-023, T-119, T-120 | Real UAC, elevated/non-elevated fixtures | The `asInvoker` read path is tested; a `requireAdministrator` fixture and real tokens are manual. |
-| T-031, T-032, T-033, T-034 | Revision display on the real tree, game-version preflight, installed status, read-only idempotence | Partially covered by models and synthetic trees; the real install is at 3075915. |
-| T-042, T-044 | Manifest revision code path, manifest SHA-256 in `install.json` | The parser returns `E_MANIFEST_REVISION`; the state file carries `manifest_sha256`, but no test asserts the saved value yet. |
+| T-031, T-032, T-033, T-034 | Revision display on the real tree, game-version preflight, installed status, read-only idempotence | Partially covered by models and synthetic trees; the real tree is at delta 3273853, but no r3 manifest is published yet. |
+| T-042, T-044 | Manifest revision code path, manifest SHA-256 in `install.json` | Revisions 3075915, 3219598 and 3273853 are accepted as data; the state file carries `manifest_sha256`, but no test asserts the saved value yet. |
 | T-047, T-051 | TLS negative matrix, connect/body stall timeouts | Would need a TLS loopback with generated certificates and a stalling server; WinHTTP keeps validation on. |
 | T-048, T-049, T-050 | Five-hop chain, loop detection, 429/503 `Retry-After`, 5xx retry counts | Redirect allowlist/refusal is tested; retries exist but are not exercised by a status-sequence server except the loopback cases. |
 | T-053, T-054, T-057 | Exact 256 KiB manifest cap, launcher/archive caps, lying `Content-Length` | Streaming caps are implemented; the tests cover a truncated body but not every boundary. |
@@ -55,11 +56,11 @@
 
 ## Hosting gap
 
-The repository and the `launcher-v0.1.0` release are private. `curl` against the canonical latest asset URL returns HTTP 404 without authentication, and BLUEWARD sends no token by design. The manifest, launcher and patch URLs are correct, but the in-app update check and the patch download cannot fetch from a private release. Make the release assets public (or mirror the manifest and archive to a public host) before pointing a user at this build.
+The repository and the `launcher-v0.1.1` release are private. `curl` against the canonical latest asset URL returns HTTP 404 without authentication, and BLUEWARD sends no token by design. The manifest, launcher and patch URLs are correct, but the in-app update check and the patch download cannot fetch from a private release. Make the release assets public (or mirror the manifest and archive to a public host) before pointing a user at this build.
 
 ## Real-client gaps
 
-- The local game is at resource `3075915`. The three 3219598 Res root A targets appear only after the game's first-screen download. Gate A therefore refuses the real tree today; this is the specified behaviour, not a bug.
+- The local game has builtin `3075915` plus delta `3273853`; detection reports `3273853`. The no-patch state is expected until the packer publishes `manifest-3273853.json`; there is no compiled revision gate left to refuse the tree.
 - The real 241 MB archive, GitHub redirect chain and Range support (T-048, T-055, T-076) have not been exercised; only loopback equivalents have.
 - The five targets have not been accepted by the running game, and ACE/repair behaviour is unknown. Do not run the acceptance test while logged into the game.
 

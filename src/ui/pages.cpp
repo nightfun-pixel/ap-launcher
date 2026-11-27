@@ -30,14 +30,17 @@ UiModel BuildMain(const AppView& view) {
     model.badge = view.installed ? msg::FromUtf8(msg::kIdleInstalled) : (view.hasGame ? msg::FromUtf8(msg::kIdleReady) : msg::FromUtf8(msg::kIdleNoGame));
 
     model.rows.push_back({L"path", L"Папка игры", view.hasGame ? view.gamePath : L"Не выбрана", true});
-    model.rows.push_back({L"text", L"Для патча", L"нужен ресурс 3219598", false});
+    if (view.hasGame) {
+        const std::wstring revision = view.resourceRevision.empty() ? std::wstring(msg::FromUtf8(msg::kUnknown))
+                                                                   : view.resourceRevision;
+        const std::wstring check = view.noPatch ? msg::NoPatchRow(view.resourceRevision) : L"ресурс " + revision;
+        model.rows.push_back({L"text", L"Проверка", check, view.noPatch || view.localState == LocalState::NeedsGameUpdate});
+    }
     model.rows.push_back({L"text", L"Перевод",
                           view.installed ? L"Установлен перевод " + view.installedVersion +
                                                (view.installedAt.empty() ? std::wstring() : L" · " + view.installedAt)
                                          : L"Перевод не установлен",
                           view.installed});
-    if (view.localState == LocalState::NeedsGameUpdate && !view.gateDetail.empty())
-        model.rows.push_back({L"text", L"Проверка", view.gateDetail, true});
     if (view.updateAvailable && !view.latestPatch.empty())
         model.rows.push_back({L"text", L"Обновление", L"доступно " + view.latestPatch, true});
 
@@ -55,7 +58,7 @@ UiModel BuildMain(const AppView& view) {
             model.buttons.push_back({L"install", L"Установить / Обновить перевод", true, gateReady});
             model.buttons.push_back({L"restore", L"Вернуть оригинал", false, view.installed && !busy});
         }
-        if (view.launcherUpdate) model.buttons.push_back({L"update", L"Обновить BLUEWARD", false, view.canInstall});
+        if (view.launcherUpdate) model.buttons.push_back({L"update", L"Обновить BLUEWARD", false, true});
         if (!view.error.empty()) {
             model.buttons.push_back({L"copy", L"Скопировать ошибку", false, true});
             model.buttons.push_back({L"retry", L"Повторить", false, true});
@@ -67,6 +70,8 @@ UiModel BuildMain(const AppView& view) {
     model.percent = FormatPercent(view.progress);
     if (busy || !view.error.empty()) {
         model.status = view.status;
+    } else if (view.noPatch && view.hasGame) {
+        model.status = msg::NoPatch(view.resourceRevision);
     } else {
         switch (view.localState) {
             case LocalState::NoGame: model.status = msg::FromUtf8(msg::kIdleNoGame); break;

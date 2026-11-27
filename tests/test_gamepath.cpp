@@ -55,8 +55,16 @@ void RunGamePathTests() {
         const std::wstring rootA = patch.gameDir + L"\\AzurPromiliaJP_Data\\.res\\default_package";
         blueward::MakeDirs(rootA);
         CHECK(testutil::Write(rootA + L"\\0release_default_package_1111111.version", "1111111"));
-        CHECK(blueward::LocalResourceRevision(patch.gameDir).empty());
+        // Root A version files are not the delta: only ManifestFiles\*.bytes count there.
+        CHECK(blueward::LocalResourceRevision(patch.gameDir) == L"3219598");
         CHECK(blueward::RemoveFile(rootA + L"\\0release_default_package_1111111.version"));
+
+        // A second builtin version for one package is malformed, not an older revision to use.
+        const std::wstring second =
+            testgame::BuiltinVersionPath(patch.gameDir, L"default_package", L"2222222");
+        CHECK(testutil::Write(second, "2222222"));
+        CHECK(blueward::LocalResourceRevision(patch.gameDir).empty());
+        CHECK(blueward::RemoveFile(second));
         CHECK(blueward::LocalResourceRevision(patch.gameDir) == L"3219598");
     }
     {
@@ -90,5 +98,81 @@ void RunGamePathTests() {
         testgame::Synthetic old;
         CHECK(testgame::Build(game, L"3075915", old, error));
         CHECK(blueward::LocalResourceRevision(old.gameDir) == L"3075915");
+    }
+    {
+        // Builtin only: the version files carry the revision, the source is builtin.
+        const std::wstring game = testutil::Path(L"revision-builtin");
+        testgame::Synthetic tree;
+        CHECK(testgame::Build(game, L"3075915", tree, error));
+        const blueward::RevisionInfo info = blueward::DetectLocalRevision(tree.gameDir);
+        CHECK(info.valid);
+        CHECK(info.revision == L"3075915");
+        CHECK(info.source == blueward::RevisionSource::Builtin);
+        CHECK(info.packages.size() >= 3);
+    }
+    {
+        // Both roots: the 3273853 delta outranks the 3075915 builtin files.
+        const std::wstring game = testutil::Path(L"revision-both");
+        testgame::Synthetic tree;
+        CHECK(testgame::Build(game, L"3075915", tree, error));
+        for (const wchar_t* package : {L"default_package", L"raw_base_package", L"raw_streaming_package"}) {
+            const std::wstring path = testgame::DeltaManifestPath(tree.gameDir, package, L"3273853");
+            CHECK(testutil::Write(path, std::string(32, 'x')));
+        }
+        const blueward::RevisionInfo info = blueward::DetectLocalRevision(tree.gameDir);
+        CHECK(info.valid);
+        CHECK(info.revision == L"3273853");
+        CHECK(info.source == blueward::RevisionSource::Delta);
+        CHECK(blueward::LocalResourceRevision(tree.gameDir) == L"3273853");
+        bool hasDefault = false;
+        for (const std::wstring& package : info.packages) hasDefault = hasDefault || package == L"default_package";
+        CHECK(hasDefault);
+    }
+    {
+        // Delta only: no .version file anywhere, the ManifestFiles bytes still identify the revision.
+        const std::wstring game = testutil::Path(L"revision-delta");
+        testgame::Synthetic tree;
+        CHECK(testgame::Build(game, L"3075915", tree, error));
+        for (const wchar_t* package : {L"default_package", L"raw_base_package", L"raw_streaming_package", L"static_package"}) {
+            const std::wstring revision = std::wstring(package) == L"static_package" ? L"3075915" : L"3075915";
+            CHECK(blueward::RemoveFile(testgame::BuiltinVersionPath(tree.gameDir, package, revision)));
+            CHECK(testutil::Write(testgame::DeltaManifestPath(tree.gameDir, package, L"3273853"), std::string(16, 'y')));
+        }
+        const blueward::RevisionInfo info = blueward::DetectLocalRevision(tree.gameDir);
+        CHECK(info.valid);
+        CHECK(info.revision == L"3273853");
+        CHECK(info.source == blueward::RevisionSource::Delta);
+        CHECK(blueward::LocalResourceRevision(tree.gameDir) == L"3273853");
+    }
+    {
+        // Absent and malformed are invalid, not silently zero.
+        const std::wstring absentGame = testutil::Path(L"revision-absent");
+        testgame::Synthetic absent;
+        CHECK(testgame::Build(absentGame, L"3075915", absent, error));
+        for (const wchar_t* package : {L"default_package", L"raw_base_package", L"raw_streaming_package", L"static_package"})
+            CHECK(blueward::RemoveFile(testgame::BuiltinVersionPath(absent.gameDir, package, L"3075915")));
+        const blueward::RevisionInfo none = blueward::DetectLocalRevision(absent.gameDir);
+        CHECK(!none.valid);
+        CHECK(none.revision.empty());
+        CHECK(none.source == blueward::RevisionSource::None);
+        CHECK(blueward::LocalResourceRevision(absent.gameDir).empty());
+
+        const std::wstring badGame = testutil::Path(L"revision-malformed");
+        testgame::Synthetic bad;
+        CHECK(testgame::Build(badGame, L"3075915", bad, error));
+        CHECK(testutil::Write(testgame::BuiltinVersionPath(bad.gameDir, L"default_package", L"3075915"), "9999999"));
+        const blueward::RevisionInfo malformed = blueward::DetectLocalRevision(bad.gameDir);
+        CHECK(!malformed.valid);
+        CHECK(blueward::LocalResourceRevision(bad.gameDir).empty());
+    }
+    {
+        // The delta folder is optional; the game root stays valid without AzurPromiliaJP_Data\.res.
+        const std::wstring game = testutil::Path(L"revision-no-delta-root");
+        testgame::Synthetic tree;
+        CHECK(testgame::Build(game, L"3075915", tree, error));
+        CHECK(blueward::DeleteTree(tree.gameDir + L"\\AzurPromiliaJP_Data\\.res"));
+        CHECK(!blueward::DirExists(tree.gameDir + L"\\AzurPromiliaJP_Data\\.res"));
+        CHECK(blueward::IsGameDir(tree.gameDir));
+        CHECK(blueward::DetectLocalRevision(tree.gameDir).revision == L"3075915");
     }
 }

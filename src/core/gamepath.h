@@ -13,8 +13,10 @@ inline constexpr const wchar_t* kGameExe = L"AzurPromiliaJP.exe";
 inline constexpr const wchar_t* kGameLauncherExe = L"AZUPRO_JP_Gamelauncher.exe";
 inline constexpr const wchar_t* kDataDir = L"AzurPromiliaJP_Data";
 inline constexpr const wchar_t* kResDir = L"StreamingAssets\\.res";
+inline constexpr const wchar_t* kDeltaResDir = L".res";
 
 // Requires AzurPromiliaJP.exe (a file) and AzurPromiliaJP_Data\StreamingAssets\.res (a folder).
+// The delta folder AzurPromiliaJP_Data\.res is optional.
 bool IsGameDir(const std::wstring& dir);
 
 // Absolute, backslashes, no trailing separator, no \\?\ prefix. Accepts the game folder, its
@@ -26,10 +28,25 @@ std::wstring ResRoot(const std::wstring& gameDir);
 // The game's own version from <game>\manifest.json (`version`), empty when unreadable.
 std::wstring ReadGameVersion(const std::wstring& gameDir);
 
+enum class RevisionSource { None, Builtin, Delta };
+
+// The highest local resource revision and where it came from. Builtin revisions are read from
+// StreamingAssets\.res\<pkg>\0release_<pkg>_<rev>.version; delta revisions from
+// .res\<pkg>\ManifestFiles\0release_<pkg>_<rev>.bytes. A malformed candidate makes the whole
+// result invalid rather than silently falling back to an older revision.
+struct RevisionInfo {
+    std::wstring revision;
+    RevisionSource source = RevisionSource::None;
+    std::vector<std::wstring> packages;
+    bool valid = false;
+};
+
+RevisionInfo DetectLocalRevision(const std::wstring& gameDir);
+
 // Package revisions parsed from <res>\<package>\0release_<package>_<revision>.version.
 // Key: package name, value: revision digits.
 bool ReadResVersions(const std::wstring& resRoot, std::map<std::wstring, std::wstring>& versions);
-// The revision of default_package (falling back to the highest non-static package).
+// DetectLocalRevision(...).revision, or empty when unknown/malformed.
 std::wstring LocalResourceRevision(const std::wstring& gameDir);
 
 // A case-insensitive search of the process list by executable name.

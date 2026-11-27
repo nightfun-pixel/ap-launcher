@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "core/baseline.h"
 #include "core/baseline_state.h"
 #include "core/download.h"
 #include "core/manifest.h"
@@ -102,11 +101,9 @@ bool RecoverJournal(const std::wstring& gameDir, const std::wstring& backupsRoot
 std::wstring InstallStatePath(const std::wstring& stateRoot);
 std::wstring JournalDir(const std::wstring& backupsRoot);  // unique backups\<timestamp>
 
-// The offline idle gate: NoGame, Installed (valid install.json for this GR), NeedsGameUpdate
-// (known revision not 3219598, or the first baseline target missing/wrong-size/wrong-hash), or
-// Ready. `targets` lets a test use the synthetic manifest identities; production uses the pinned
-// 0.1.0 baseline in core/baseline.h.
-LocalGate EvaluateTargetState(const std::wstring& gameDir, const std::wstring& stateRoot, const std::vector<BaselineTarget>& targets);
+// The offline idle gate: NoGame, Installed (valid install.json for this GR), NeedsGameUpdate (the
+// local revision is unknown or malformed), or Ready. Target identities come only from the fetched
+// manifest; this gate never carries a compiled path or hash.
 LocalGate EvaluateLocalState(const std::wstring& gameDir, const std::wstring& stateRoot);
 
 }  // namespace blueward

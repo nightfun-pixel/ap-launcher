@@ -298,7 +298,9 @@ bool SearchRoot(const std::wstring& root, const std::wstring& basenameLower, std
     return true;
 }
 
-std::wstring GateText(const std::wstring& detail) { return msg::FromUtf8(msg::kVersion) + L" " + detail; }
+std::wstring GateText(const std::wstring& revision, const std::wstring& detail) {
+    return msg::RevisionUpdate(revision) + L" " + detail;
+}
 
 bool ReplaceWithNew(const std::wstring& target, const std::wstring& staged, const std::string& expectedSha, DWORD attributes,
                     std::string& error) {
@@ -510,15 +512,15 @@ bool BuildPlan(const Manifest& manifest, const std::wstring& gameDir, InstallPla
 bool CheckGameRevision(const InstallPlan& plan, std::wstring& message, std::string* code) {
     message.clear();
     if (code) code->clear();
-    if (plan.resourceRevision != kRequiredRevision) {
-        message = msg::FromUtf8(msg::kManifestRevision);
+    if (plan.resourceRevision.empty()) {
+        message = msg::FromUtf8(msg::kRevisionUnknown);
         if (code) *code = "E_MANIFEST_REVISION";
         return false;
     }
     const std::wstring local = LocalResourceRevision(plan.gameDir);
     if (local.empty()) return true;  // Gate A skipped; Gate B is authoritative
     if (local != Widen(plan.resourceRevision)) {
-        message = msg::FromUtf8(msg::kVersion);
+        message = msg::RevisionUpdate(Widen(plan.resourceRevision));
         if (code) *code = "E_VERSION_REVISION";
         return false;
     }
@@ -633,7 +635,6 @@ bool ApplyInstall(const InstallPlan& plan, const std::wstring& zipPath, const st
 
     phase(InstallPhase::Checking);
     if (!IsGameDir(plan.gameDir)) return fail("E_GAME_INVALID", L"Папка игры не найдена. Выберите папку с AzurPromiliaJP.exe.");
-    if (plan.resourceRevision != kRequiredRevision) return fail("E_MANIFEST_REVISION", msg::FromUtf8(msg::kManifestRevision));
     std::wstring localMessage;
     if (!CheckGameVersion(plan, ReadGameVersion(plan.gameDir), localMessage)) return fail("E_GAME_VERSION", localMessage);
     if (!CheckGameRevision(plan, localMessage, &report.code)) {
@@ -669,7 +670,7 @@ bool ApplyInstall(const InstallPlan& plan, const std::wstring& zipPath, const st
 
     std::wstring detail;
     const GateResult gate = CheckBefore(plan, stateRoot, detail, &report.code);
-    if (gate != GateResult::Ok) return fail("E_VERSION_BEFORE", GateText(detail));
+    if (gate != GateResult::Ok) return fail("E_VERSION_BEFORE", GateText(Widen(plan.resourceRevision), detail));
     if (running()) {
         failsRunning(message, report.code);
         return false;
@@ -732,7 +733,7 @@ bool ApplyInstall(const InstallPlan& plan, const std::wstring& zipPath, const st
                     break;
                 }
             }
-            return fail("E_VERSION_BEFORE", GateText(msg::GateDetailChanged(changedName)));
+            return fail("E_VERSION_BEFORE", GateText(Widen(plan.resourceRevision), msg::GateDetailChanged(changedName)));
         }
     }
 
@@ -992,7 +993,7 @@ bool RecoverJournal(const std::wstring& gameDir, const std::wstring& backupsRoot
     return true;
 }
 
-LocalGate EvaluateTargetState(const std::wstring& gameDir, const std::wstring& stateRoot, const std::vector<BaselineTarget>& targets) {
+LocalGate EvaluateLocalState(const std::wstring& gameDir, const std::wstring& stateRoot) {
     LocalGate gate;
     if (!IsGameDir(gameDir)) {
         gate.state = LocalState::NoGame;
@@ -1009,49 +1010,16 @@ LocalGate EvaluateTargetState(const std::wstring& gameDir, const std::wstring& s
         gate.detail = L"перевод " + Widen(state.patchVersion) + L" установлен";
         return gate;
     }
-    const std::wstring local = LocalResourceRevision(gameDir);
-    if (!local.empty() && local != Widen(kRequiredRevision)) {
+    const RevisionInfo revision = DetectLocalRevision(gameDir);
+    if (!revision.valid || revision.revision.empty()) {
         gate.state = LocalState::NeedsGameUpdate;
         gate.code = "E_VERSION_REVISION";
-        gate.detail = L"ресурс " + local;
+        gate.detail = L"ревизия ресурсов не найдена";
         return gate;
-    }
-    for (const BaselineTarget& target : targets) {
-        std::wstring path;
-        if (!SafeJoin(gameDir, target.target, path)) {
-            gate.state = LocalState::NeedsGameUpdate;
-            gate.code = "E_TARGET";
-            gate.detail = L"недопустимый путь: " + Widen(target.target);
-            return gate;
-        }
-        const std::wstring name = BaseName(path);
-        if (!FileExists(path)) {
-            gate.state = LocalState::NeedsGameUpdate;
-            gate.code = "E_VERSION_BEFORE";
-            gate.detail = L"не найден файл: " + name;
-            return gate;
-        }
-        if (FileSize(path) != target.size) {
-            gate.state = LocalState::NeedsGameUpdate;
-            gate.code = "E_VERSION_BEFORE";
-            gate.detail = L"не совпадает размер: " + name;
-            return gate;
-        }
-        std::string hash;
-        if (!Sha256File(path, hash) || hash != target.sha256) {
-            gate.state = LocalState::NeedsGameUpdate;
-            gate.code = "E_VERSION_BEFORE";
-            gate.detail = L"не совпадает SHA-256: " + name;
-            return gate;
-        }
     }
     gate.state = LocalState::Ready;
     gate.canInstall = true;
     return gate;
-}
-
-LocalGate EvaluateLocalState(const std::wstring& gameDir, const std::wstring& stateRoot) {
-    return EvaluateTargetState(gameDir, stateRoot, Baseline3219598());
 }
 
 }  // namespace blueward

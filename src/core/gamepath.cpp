@@ -46,12 +46,15 @@ bool HasReparse(const std::wstring& path) {
 // GR itself and every component below it must be free of reparse points (FR-76).
 bool PathComponentsClear(const std::wstring& gameDir) {
     if (HasReparse(gameDir)) return false;
-    const wchar_t* tail[] = {kDataDir, L"StreamingAssets", L".res"};
-    std::wstring path = gameDir;
-    for (const wchar_t* part : tail) {
-        path += L"\\";
-        path += part;
-        if (DirExists(path) && HasReparse(path)) return false;
+    const wchar_t* tails[][3] = {{kDataDir, L"StreamingAssets", L".res"}, {kDataDir, kDeltaResDir, nullptr}};
+    for (const auto& tail : tails) {
+        std::wstring path = gameDir;
+        for (const wchar_t* part : tail) {
+            if (!part) break;
+            path += L"\\";
+            path += part;
+            if (DirExists(path) && HasReparse(path)) return false;
+        }
     }
     return true;
 }
@@ -120,6 +123,113 @@ PackageVersion ReadPackageVersion(const std::wstring& resRoot, const wchar_t* pa
         result.value.clear();
     }
     return result;
+}
+
+struct ReleaseFile {
+    std::wstring package;
+    std::wstring revision;
+};
+
+bool ParseReleaseFile(const std::wstring& name, const wchar_t* extension, ReleaseFile& out) {
+    const std::wstring prefix = L"0release_";
+    const std::size_t extLength = wcslen(extension);
+    if (name.size() <= prefix.size() + extLength) return false;
+    if (name.rfind(prefix, 0) != 0) return false;
+    if (name.compare(name.size() - extLength, extLength, extension) != 0) return false;
+    const std::wstring stem = name.substr(prefix.size(), name.size() - prefix.size() - extLength);
+    const std::size_t underscore = stem.find_last_of(L'_');
+    if (underscore == std::wstring::npos || underscore == 0) return false;
+    out.package = stem.substr(0, underscore);
+    out.revision = stem.substr(underscore + 1);
+    if (out.package.empty() || !IsDigits(out.revision)) return false;
+    return true;
+}
+
+std::vector<std::wstring> PackageDirs(const std::wstring& root) {
+    std::vector<std::wstring> packages;
+    WIN32_FIND_DATAW data{};
+    HANDLE find = FindFirstFileW((root + L"\\*").c_str(), &data);
+    if (find == INVALID_HANDLE_VALUE) return packages;
+    do {
+        if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) continue;
+        const std::wstring name = data.cFileName;
+        if (name == L"." || name == L"..") continue;
+        packages.push_back(name);
+        if (packages.size() >= 128) break;
+    } while (FindNextFileW(find, &data));
+    FindClose(find);
+    return packages;
+}
+
+std::vector<std::wstring> FilesWithPattern(const std::wstring& dir, const wchar_t* pattern) {
+    std::vector<std::wstring> files;
+    WIN32_FIND_DATAW data{};
+    HANDLE find = FindFirstFileW((dir + L"\\" + pattern).c_str(), &data);
+    if (find == INVALID_HANDLE_VALUE) return files;
+    do {
+        if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) continue;
+        files.push_back(dir + L"\\" + data.cFileName);
+        if (files.size() > 2) break;
+    } while (FindNextFileW(find, &data));
+    FindClose(find);
+    return files;
+}
+
+bool ReadRevisionContent(const std::wstring& path, std::wstring& out) {
+    std::string bytes;
+    if (!ReadFileBytes(path, bytes, 32)) return false;
+    while (!bytes.empty() && (bytes.back() == '\r' || bytes.back() == '\n' || bytes.back() == ' ' || bytes.back() == '\t'))
+        bytes.pop_back();
+    out = Widen(bytes);
+    return IsDigits(out);
+}
+
+int CompareRevision(const std::wstring& a, const std::wstring& b) {
+    std::size_t ai = 0, bi = 0;
+    while (ai + 1 < a.size() && a[ai] == L'0') ++ai;
+    while (bi + 1 < b.size() && b[bi] == L'0') ++bi;
+    const std::size_t al = a.size() - ai, bl = b.size() - bi;
+    if (al != bl) return al < bl ? -1 : 1;
+    const int cmp = a.compare(ai, al, b, bi, bl);
+    return cmp < 0 ? -1 : (cmp > 0 ? 1 : 0);
+}
+
+struct RevisionCandidate {
+    std::wstring revision;
+    std::wstring package;
+    RevisionSource source = RevisionSource::None;
+};
+
+// Returns false on a malformed candidate, so the caller can refuse the whole tree.
+bool BuiltinCandidates(const std::wstring& root, std::vector<RevisionCandidate>& out) {
+    if (!DirExists(root)) return true;
+    for (const std::wstring& package : PackageDirs(root)) {
+        const std::wstring dir = root + L"\\" + package;
+        const std::vector<std::wstring> files = FilesWithPattern(dir, L"0release_*.version");
+        if (files.empty()) continue;
+        if (files.size() != 1) return false;
+        ReleaseFile parsed;
+        if (!ParseReleaseFile(BaseName(files[0]), L".version", parsed) || parsed.package != package) return false;
+        std::wstring content;
+        if (!ReadRevisionContent(files[0], content) || content != parsed.revision) return false;
+        out.push_back({parsed.revision, package, RevisionSource::Builtin});
+    }
+    return true;
+}
+
+bool DeltaCandidates(const std::wstring& root, std::vector<RevisionCandidate>& out) {
+    if (!DirExists(root)) return true;
+    for (const std::wstring& package : PackageDirs(root)) {
+        const std::wstring dir = root + L"\\" + package + L"\\ManifestFiles";
+        if (!DirExists(dir)) continue;
+        const std::vector<std::wstring> files = FilesWithPattern(dir, L"0release_*.bytes");
+        if (files.empty()) continue;
+        if (files.size() != 1) return false;
+        ReleaseFile parsed;
+        if (!ParseReleaseFile(BaseName(files[0]), L".bytes", parsed) || parsed.package != package) return false;
+        out.push_back({parsed.revision, package, RevisionSource::Delta});
+    }
+    return true;
 }
 
 std::wstring HeadVersion(const std::wstring& gameDir) {
@@ -199,22 +309,39 @@ bool ReadResVersions(const std::wstring& resRoot, std::map<std::wstring, std::ws
     return !versions.empty();
 }
 
-std::wstring LocalResourceRevision(const std::wstring& gameDir) {
-    const std::wstring rootB = ResRoot(gameDir);
-    const std::wstring rootA = gameDir + L"\\" + kDataDir + L"\\.res";
-    for (const wchar_t* package : {L"default_package", L"raw_base_package"}) {
-        const PackageVersion b = ReadPackageVersion(rootB, package);
-        const PackageVersion a = ReadPackageVersion(rootA, package);
-        if ((b.found && !b.valid) || (a.found && !a.valid)) return {};
-        if (b.found && a.found && b.value != a.value) return {};
-        const std::wstring value = b.found ? b.value : a.value;
-        if (value.empty()) continue;
-        const std::wstring& sourceRoot = b.found ? rootB : rootA;
-        const PackageVersion streaming = ReadPackageVersion(sourceRoot, L"raw_streaming_package");
-        if (streaming.found && (!streaming.valid || streaming.value != value)) return {};
-        return value;
+RevisionInfo DetectLocalRevision(const std::wstring& gameDir) {
+    RevisionInfo info;
+    if (!IsGameDir(gameDir)) return info;
+    std::vector<RevisionCandidate> candidates;
+    if (!BuiltinCandidates(ResRoot(gameDir), candidates)) return info;
+    if (!DeltaCandidates(gameDir + L"\\" + kDataDir + L"\\" + kDeltaResDir, candidates)) return info;
+    if (candidates.empty()) return info;
+
+    const RevisionCandidate* highest = &candidates.front();
+    bool highestBuiltin = highest->source == RevisionSource::Builtin;
+    for (const RevisionCandidate& candidate : candidates) {
+        const int cmp = CompareRevision(candidate.revision, highest->revision);
+        if (cmp > 0) {
+            highest = &candidate;
+            highestBuiltin = candidate.source == RevisionSource::Builtin;
+        } else if (cmp == 0 && candidate.source == RevisionSource::Builtin) {
+            highestBuiltin = true;
+        }
     }
-    return {};
+    info.revision = highest->revision;
+    info.source = highestBuiltin ? RevisionSource::Builtin : RevisionSource::Delta;
+    for (const RevisionCandidate& candidate : candidates) {
+        if (std::find(info.packages.begin(), info.packages.end(), candidate.package) == info.packages.end())
+            info.packages.push_back(candidate.package);
+    }
+    std::sort(info.packages.begin(), info.packages.end());
+    info.valid = true;
+    return info;
+}
+
+std::wstring LocalResourceRevision(const std::wstring& gameDir) {
+    const RevisionInfo info = DetectLocalRevision(gameDir);
+    return info.valid ? info.revision : std::wstring();
 }
 
 bool IsProcessRunning(const std::wstring& exeName) {

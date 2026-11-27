@@ -34,7 +34,7 @@ blueward::InstallOptions Options(bool running = false) {
     return options;
 }
 
-std::wstring VersionMessage() { return blueward::msg::FromUtf8(blueward::msg::kVersion); }
+std::wstring RevisionMessage(const std::wstring& revision) { return blueward::msg::RevisionUpdate(revision); }
 
 }  // namespace
 
@@ -116,7 +116,7 @@ void RunInstallerTests() {
         CHECK(!blueward::ApplyInstall(fixture.plan, fixture.patch.zipPath, fixture.staging, fixture.state, fixture.backups, Options(), report,
                                       message));
         CHECK(report.code == "E_VERSION_BEFORE");
-        CHECK_MSG(message == VersionMessage() + L" " + blueward::msg::GateDetailMissing(basename), blueward::Narrow(message));
+        CHECK_MSG(message == RevisionMessage(L"3219598") + L" " + blueward::msg::GateDetailMissing(basename), blueward::Narrow(message));
         CHECK(!blueward::HasInstallState(fixture.state));
     }
     {
@@ -150,7 +150,7 @@ void RunInstallerTests() {
         std::string code;
         CHECK(!blueward::CheckGameRevision(fixture.plan, message, &code));
         CHECK(code == "E_VERSION_REVISION");
-        CHECK(message == VersionMessage());
+        CHECK(message == RevisionMessage(L"3219598"));
         blueward::InstallReport report;
         CHECK(!blueward::ApplyInstall(fixture.plan, fixture.patch.zipPath, fixture.staging, fixture.state, fixture.backups, Options(),
                                       report, message));
@@ -242,31 +242,29 @@ void RunInstallerTests() {
         CHECK(blueward::HasInstallState(fixture.state));
     }
     {
-        // T-019/T-031: the offline idle gate behind the UI.
+        // T-019/T-031: the offline idle gate is revision-driven, with no compiled target baseline.
         Fixture old;
         CHECK(old.Build(L"local-gate-old", L"3075915"));
         blueward::LocalGate gate = blueward::EvaluateLocalState(old.patch.gameDir, old.state);
-        CHECK(gate.state == blueward::LocalState::NeedsGameUpdate);
-        CHECK(!gate.canInstall);
-        CHECK(gate.detail.find(L"3075915") != std::wstring::npos);
-
-        Fixture fixture;
-        CHECK(fixture.Build(L"local-gate-ready"));
-        std::vector<blueward::BaselineTarget> targets;
-        for (const blueward::ResolvedFile& file : fixture.plan.files)
-            targets.push_back({file.target, file.beforeSize, file.beforeSha256});
-        gate = blueward::EvaluateTargetState(fixture.patch.gameDir, fixture.state, targets);
         CHECK(gate.state == blueward::LocalState::Ready);
         CHECK(gate.canInstall);
         CHECK(gate.detail.empty());
 
-        const std::wstring missing = testgame::TargetPath(fixture.patch.gameDir, 2);
-        CHECK(blueward::RemoveFile(missing));
-        gate = blueward::EvaluateTargetState(fixture.patch.gameDir, fixture.state, targets);
+        Fixture unknown;
+        CHECK(unknown.Build(L"local-gate-unknown", L"3075915"));
+        for (const wchar_t* package : {L"default_package", L"raw_base_package", L"raw_streaming_package", L"static_package"})
+            CHECK(blueward::RemoveFile(testgame::BuiltinVersionPath(unknown.patch.gameDir, package, L"3075915")));
+        gate = blueward::EvaluateLocalState(unknown.patch.gameDir, unknown.state);
         CHECK(gate.state == blueward::LocalState::NeedsGameUpdate);
         CHECK(!gate.canInstall);
-        CHECK(gate.detail.find(blueward::BaseName(missing)) != std::wstring::npos);
-        CHECK(testgame::RestoreOriginal(fixture.patch.gameDir, 2));
+        CHECK(gate.detail.find(L"ревизи") != std::wstring::npos);
+
+        Fixture fixture;
+        CHECK(fixture.Build(L"local-gate-ready"));
+        gate = blueward::EvaluateLocalState(fixture.patch.gameDir, fixture.state);
+        CHECK(gate.state == blueward::LocalState::Ready);
+        CHECK(gate.canInstall);
+        CHECK(gate.detail.empty());
 
         blueward::InstallReport report;
         std::wstring message;
@@ -275,5 +273,50 @@ void RunInstallerTests() {
         gate = blueward::EvaluateLocalState(fixture.patch.gameDir, fixture.state);
         CHECK(gate.state == blueward::LocalState::Installed);
         CHECK(gate.canInstall);
+    }
+    {
+        // The gate is driven by the synthetic 3273853 manifest, not by a compiled revision.
+        Fixture fixture;
+        CHECK(fixture.Build(L"install-3273853", L"3273853"));
+        CHECK(fixture.plan.resourceRevision == "3273853");
+        std::wstring message;
+        std::string code;
+        CHECK(blueward::CheckGameRevision(fixture.plan, message, &code));
+        CHECK(blueward::CheckBefore(fixture.plan, fixture.state, message, &code) == blueward::GateResult::Ok);
+        const blueward::LocalGate local = blueward::EvaluateLocalState(fixture.patch.gameDir, fixture.state);
+        CHECK(local.state == blueward::LocalState::Ready);
+        CHECK(local.canInstall);
+
+        const std::wstring missing = testgame::TargetPath(fixture.patch.gameDir, 2);
+        CHECK(blueward::RemoveFile(missing));
+        blueward::InstallReport report;
+        CHECK(!blueward::ApplyInstall(fixture.plan, fixture.patch.zipPath, fixture.staging, fixture.state, fixture.backups, Options(),
+                                      report, message));
+        CHECK(report.code == "E_VERSION_BEFORE");
+        CHECK_MSG(message == RevisionMessage(L"3273853") + L" " + blueward::msg::GateDetailMissing(blueward::BaseName(missing)),
+                  blueward::Narrow(message));
+        for (std::size_t i = 0; i < fixture.patch.before.size(); ++i) {
+            const std::wstring target = testgame::TargetPath(fixture.patch.gameDir, i);
+            if (i == 2) continue;
+            CHECK(testutil::Read(target) == fixture.patch.before[i]);
+            CHECK(!testutil::Exists(target + L".apbak"));
+        }
+        CHECK(!blueward::HasInstallState(fixture.state));
+
+        CHECK(testgame::RestoreOriginal(fixture.patch.gameDir, 2));
+        CHECK(testgame::Damage(fixture.patch.gameDir, 1, std::string(testgame::BeforeBody(1).size(), 'z')));
+        message.clear();
+        CHECK(!blueward::ApplyInstall(fixture.plan, fixture.patch.zipPath, fixture.staging, fixture.state, fixture.backups, Options(),
+                                      report, message));
+        CHECK(report.code == "E_VERSION_BEFORE");
+        CHECK_MSG(message == RevisionMessage(L"3273853") + L" " + blueward::msg::GateDetailHash(blueward::BaseName(testgame::TargetPath(
+                                                                                          fixture.patch.gameDir, 1))),
+                  blueward::Narrow(message));
+        CHECK(!blueward::HasInstallState(fixture.state));
+        for (std::size_t i = 0; i < fixture.patch.before.size(); ++i) {
+            const std::wstring target = testgame::TargetPath(fixture.patch.gameDir, i);
+            if (i != 1) CHECK(testutil::Read(target) == fixture.patch.before[i]);
+            CHECK(!testutil::Exists(target + L".apbak"));
+        }
     }
 }
