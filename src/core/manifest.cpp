@@ -362,8 +362,7 @@ bool IsAllowedDownloadUrl(std::string_view url, std::string& why) {
         return false;
     }
     if (IsCanonicalManifestUrl(url) || IsCanonicalLauncherUrl(url)) return true;
-    // The patch path is derived from the canonical launcher URL, so the owner literal stays only
-    // in the two URL constants.
+    // The patch path is derived from the canonical launcher URL.
     const std::string canonical = kLauncherExeUrl;
     const std::string repo = canonical.substr(0, canonical.find("/releases/"));
     const std::string host = "https://github.com";

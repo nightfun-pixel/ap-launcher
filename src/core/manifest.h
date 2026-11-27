@@ -1,7 +1,7 @@
 #pragma once
 // The update feed: one manifest that describes the current patch archive and the current launcher.
 // Schema 1 is produced by the Studio publisher; this file validates it strictly before any byte of
-// the game is touched. SPEC §3 is normative.
+// the game is touched.
 
 #include <cstdint>
 #include <string>
@@ -10,8 +10,7 @@
 
 namespace blueward {
 
-// The only GitHub URLs the launcher knows. The repository owner appears in these two URLs and
-// nowhere else in the project; see README.md.
+// The only GitHub URLs the launcher knows.
 inline constexpr const char* kFeedUrl =
     "https://github.com/nightfun-pixel/ap-launcher/releases/latest/download/manifest.json";
 inline constexpr const char* kLauncherExeUrl =
