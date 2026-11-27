@@ -16,7 +16,7 @@ BLUEWARD 0.1.1 removes the compiled resource baseline. The launcher now detects 
 
 | Asset | SHA-256 | Size |
 | --- | --- | --- |
-| `BLUEWARD.exe` | `4023ed5637527fb55a3f078efdd67679dffa6b05aac1ede614ea7287ae9666c4` | 5,093,376 bytes |
+| `BLUEWARD.exe` | `6fe9ef3c2c9f87bb51c4b557e8d5cf8fd230019d13f88beb53a95256cd69b3bd` | 5,093,376 bytes |
 | `manifest.json` | compatibility manifest: launcher 0.1.1, patch block still `patch-3219598` | вЂ” |
 
 The executable embeds the 720p background (`RT_RCDATA` 101, 4,128,422 bytes). The source tree does not contain the clip; `res/bg` stays outside git.
