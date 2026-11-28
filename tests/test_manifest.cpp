@@ -73,6 +73,31 @@ void RunManifestTests() {
         CHECK(manifest.sha256 == hash);
     }
     {
+        // Seven-payload manifests carry the two external font bundles.
+        const std::string seven = ReplaceFirst(
+            kValid,
+            ",\"size\":5109385}\n    ]",
+            ",\"size\":5109385},"
+            "{\"source\":\"font-a00.r\",\"target\":\"AzurPromiliaJP_Data/StreamingAssets/.res/default_package/xlpsyuxnoz1cjmawi1wcxa.r\",\"before_sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"before_size\":4517899,\"sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"size\":4517899},"
+            "{\"source\":\"font-b00.r\",\"target\":\"AzurPromiliaJP_Data/StreamingAssets/.res/default_package/awcxxitzquckttvmx0c5q.r\",\"before_sha256\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"before_size\":4550495,\"sha256\":\"1212121212121212121212121212121212121212121212121212121212121212\",\"size\":4550495}\n    ]");
+        CHECK(!seven.empty());
+        blueward::Manifest manifest;
+        std::string error;
+        CHECK(blueward::ParseManifest(seven, manifest, error));
+        CHECK(manifest.patch.files.size() == 7);
+        if (manifest.patch.files.size() == 7) {
+            CHECK(manifest.patch.files[5].source == "font-a00.r");
+            CHECK(manifest.patch.files[6].source == "font-b00.r");
+        }
+        const std::string six = ReplaceFirst(
+            kValid,
+            ",\"size\":5109385}\n    ]",
+            ",\"size\":5109385},"
+            "{\"source\":\"font-a00.r\",\"target\":\"AzurPromiliaJP_Data/StreamingAssets/.res/default_package/xlpsyuxnoz1cjmawi1wcxa.r\",\"before_sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"before_size\":4517899,\"sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"size\":4517899}\n    ]");
+        CHECK(!six.empty());
+        CHECK(!Parses(six));
+    }
+    {
         // T-037: target grammar, reserved names, trailing dot/space, duplicate basename.
         const char* badTargets[] = {"AzurPromiliaJP_Data/../evil.bytes",
                                     "/abs.bytes",

@@ -3,7 +3,7 @@
 
 namespace blueward {
 
-inline constexpr const char* kBluewardVersion = "0.1.4";
-inline constexpr const wchar_t* kBluewardVersionW = L"0.1.4";
+inline constexpr const char* kBluewardVersion = "0.1.5";
+inline constexpr const wchar_t* kBluewardVersionW = L"0.1.5";
 
 }  // namespace blueward
