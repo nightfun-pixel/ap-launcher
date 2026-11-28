@@ -24,6 +24,10 @@ const blueward::ui::PlacedButton* FindPlaced(const blueward::ui::Layout& layout,
     return nullptr;
 }
 
+bool Overlaps(const blueward::ui::Rect& a, const blueward::ui::Rect& b) {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
 }  // namespace
 
 void RunPageTests() {
@@ -143,13 +147,17 @@ void RunPageTests() {
         view.installedAt = L"2026-11-27T20:00:00Z";
         const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
         CHECK(model.status == blueward::msg::FromUtf8(blueward::msg::kIdleInstalled));
+        const blueward::ui::UiButton* play = Find(model, L"play");
+        CHECK(play != nullptr);
+        CHECK(play && play->enabled);
+        CHECK(play && play->primary);
         const blueward::ui::UiButton* restore = Find(model, L"restore");
         CHECK(restore != nullptr);
         CHECK(restore && restore->enabled);
-        CHECK(restore && restore->primary);
+        CHECK(restore && !restore->primary);
     }
     {
-        // T-033: installed and current -> restore is primary.
+        // T-033: installed and current -> Play is primary, restore stays available.
         blueward::ui::AppView view;
         view.hasGame = true;
         view.gamePath = L"D:\\YostarGames\\AZUPRO_JP";
@@ -163,9 +171,11 @@ void RunPageTests() {
         view.localState = blueward::LocalState::Installed;
         view.canInstall = true;
         const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
+        const blueward::ui::UiButton* play = Find(model, L"play");
         const blueward::ui::UiButton* restore = Find(model, L"restore");
         const blueward::ui::UiButton* install = Find(model, L"install");
-        CHECK(restore && restore->primary);
+        CHECK(play && play->primary);
+        CHECK(restore && !restore->primary);
         CHECK(install && !install->primary);
         const blueward::ui::UiRow* state = FindRow(model, L"Перевод");
         CHECK(state != nullptr);
@@ -253,6 +263,30 @@ void RunPageTests() {
                 CHECK(!(other.rect.x < placed->rect.x + placed->rect.w && other.rect.x + other.rect.w > placed->rect.x &&
                         other.rect.y < placed->rect.y + placed->rect.h && other.rect.y + other.rect.h > placed->rect.y));
             }
+        }
+    }
+    {
+        // Installed state: Play is the full-width primary action; restore and reinstall share a row.
+        blueward::ui::AppView view;
+        view.hasGame = true;
+        view.gamePath = L"D:\\Games\\AzurPromiliaJP";
+        view.gameVersion = L"1.0.2";
+        view.resourceRevision = L"3273853";
+        view.localState = blueward::LocalState::Installed;
+        view.installed = true;
+        view.installedVersion = L"2026.11.28-4";
+        const blueward::ui::UiModel model = blueward::ui::BuildMain(view);
+        const blueward::ui::Layout layout = blueward::ui::ComputeLayout(model, 1100.0f, 720.0f);
+        const blueward::ui::PlacedButton* play = FindPlaced(layout, L"play");
+        const blueward::ui::PlacedButton* restore = FindPlaced(layout, L"restore");
+        const blueward::ui::PlacedButton* install = FindPlaced(layout, L"install");
+        CHECK(play != nullptr && restore != nullptr && install != nullptr);
+        if (play && restore && install) {
+            CHECK(play->rect.w > restore->rect.w * 1.8f);
+            CHECK(restore->rect.y > play->rect.y);
+            CHECK(install->rect.y == restore->rect.y);
+            CHECK(!Overlaps(play->rect, restore->rect));
+            CHECK(!Overlaps(restore->rect, install->rect));
         }
     }
     {

@@ -58,9 +58,12 @@ void RunSingleInstanceTests() {
         CHECK(hwnd != nullptr);
         CHECK(blueward::ActivateExistingWindow(wc.lpszClassName, blueward::kMsgActivate));
         MSG msg{};
-        while (PeekMessageW(&msg, hwnd, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
+        for (int attempt = 0; attempt < 50 && InterlockedCompareExchange(&g_activated, 0, 0) == 0; ++attempt) {
+            while (PeekMessageW(&msg, hwnd, 0, 0, PM_REMOVE)) {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+            if (InterlockedCompareExchange(&g_activated, 0, 0) == 0) Sleep(10);
         }
         CHECK(InterlockedCompareExchange(&g_activated, 0, 0) == 1);
         DestroyWindow(hwnd);

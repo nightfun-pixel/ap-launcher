@@ -49,6 +49,7 @@ public:
     void RefreshState();
     void StartInstall();
     void StartRestore();
+    void StartGame();
     void StartSelfUpdate();
     void CheckFeed(bool announce);
     void CancelJob();

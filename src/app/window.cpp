@@ -184,6 +184,7 @@ void LauncherWindow::Activate(const std::wstring& id) {
     else if (id == L"telegram") app_->OpenUrl(Widen(app_->Settings().telegramUrl));
     else if (id == L"install") app_->StartInstall();
     else if (id == L"restore") app_->StartRestore();
+    else if (id == L"play") app_->StartGame();
     else if (id == L"update") app_->StartSelfUpdate();
     else if (id == L"cancel") app_->CancelJob();
     else if (id == L"pick") app_->PickGameFolder();

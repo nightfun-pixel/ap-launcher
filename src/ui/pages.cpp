@@ -51,8 +51,11 @@ UiModel BuildMain(const AppView& view) {
     } else if (busy) {
         model.buttons.push_back({L"cancel", L"Отмена", true, view.job != ui::Job::Restoring && view.job != ui::Job::Updating});
     } else {
+        if (view.installed) {
+            model.buttons.push_back({L"play", L"Играть", true, view.hasGame && !busy});
+        }
         if (view.installed && !view.updateAvailable) {
-            model.buttons.push_back({L"restore", L"Вернуть оригинал", true, !busy});
+            model.buttons.push_back({L"restore", L"Вернуть оригинал", false, !busy});
             model.buttons.push_back({L"install", L"Переустановить перевод", false, gateReady});
         } else {
             model.buttons.push_back({L"install", L"Установить / Обновить перевод", true, gateReady});
@@ -143,7 +146,7 @@ Layout ComputeLayout(const UiModel& model, float width, float height) {
     layout.contentBottom = y;
 
     const float buttonHeight = 44.0f;
-    if (!model.error.empty() && model.buttons.size() > 2) {
+    if ((!model.error.empty() || (model.buttons.size() == 3 && model.buttons[0].primary)) && model.buttons.size() > 2) {
         // The error card keeps the primary action on its own full-width row: the label
         // "Установить / Обновить перевод" does not fit a half column of the 480 px card, and a
         // clipped primary button hides the only action that moves the user forward.

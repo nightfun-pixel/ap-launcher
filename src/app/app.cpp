@@ -626,6 +626,39 @@ void App::OpenGameFolder() {
     if (!OpenFolderSelect(config_.gamePath)) ShellExecuteW(nullptr, nullptr, config_.gamePath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
+void App::StartGame() {
+    if (busy_) return;
+    if (!IsGameDir(config_.gamePath)) {
+        SetError(L"Папка игры не найдена.");
+        if (window_) window_->Invalidate();
+        return;
+    }
+    const std::wstring exe = config_.gamePath + L"\\" + kGameExe;
+    if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        SetError(L"В папке игры нет AzurPromiliaJP.exe.");
+        if (window_) window_->Invalidate();
+        return;
+    }
+    ClearError();
+    SHELLEXECUTEINFOW info{};
+    info.cbSize = sizeof(info);
+    info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+    info.lpVerb = L"open";
+    info.lpFile = exe.c_str();
+    info.lpParameters = L"-start=azurpromilia_launcher";
+    info.lpDirectory = config_.gamePath.c_str();
+    info.nShow = SW_SHOWNORMAL;
+    if (!ShellExecuteExW(&info)) {
+        SetError(L"Не удалось запустить игру.");
+        if (window_) window_->Invalidate();
+        return;
+    }
+    if (info.hProcess) CloseHandle(info.hProcess);
+    view_.status = L"Игра запускается";
+    LogInfo(L"запуск игры: " + exe);
+    if (window_) window_->Invalidate();
+}
+
 void App::OpenLog() {
     if (FileExists(logPath_)) OpenFolderSelect(logPath_);
     else OpenFolderSelect(logsDir_);
