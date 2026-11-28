@@ -501,9 +501,9 @@ bool BuildPlan(const Manifest& manifest, const std::wstring& gameDir, InstallPla
         resolved.attributes = attributes == INVALID_FILE_ATTRIBUTES ? FILE_ATTRIBUTE_NORMAL : attributes;
         plan.files.push_back(std::move(resolved));
     }
-    if (plan.files.size() != 5 && plan.files.size() != PayloadNames().size()) {
+    if (plan.files.size() != 5 && plan.files.size() != 7 && plan.files.size() != 8 && plan.files.size() != PayloadNames().size()) {
         plan.errorCode = "E_MANIFEST_SCHEMA";
-        error = "the manifest does not list five legacy or seven current payloads";
+        error = "the manifest does not list 5, 7, 8 or 10 payloads";
         return false;
     }
     return true;

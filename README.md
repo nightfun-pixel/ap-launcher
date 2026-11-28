@@ -4,7 +4,7 @@
 
 BLUEWARD is a Win32 + Direct2D launcher and patcher for the Japanese PC client of **Azur Promilia 1.0.2**. It replaces five resource files inside the game with a Russian translation archive published in this repository's releases, and puts the original files back on demand. It is an unofficial fan tool, not affiliated with Yostar or Manjuu. It uses no account, sends no telemetry, and does not interact with the anti-cheat.
 
-Product version `0.1.5`; target game `1.0.2`. The resource revision is detected from the installed game, not compiled in: the launcher reads builtin and delta manifests and uses the highest revision it finds.
+Product version `0.1.6`; target game `1.0.2`. The resource revision is detected from the installed game, not compiled in: the launcher reads builtin and delta manifests and uses the highest revision it finds.
 
 ## How it works
 
@@ -110,11 +110,11 @@ A second install of the same patch is a no-op with `Уже установлен�
 
 ## Self-update
 
-Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe` is downloaded from the canonical latest URL, verified against `launcher.size`/`launcher.sha256`, and its `RT_MANIFEST` is read as data to compare `requestedExecutionLevel` with the current elevation. The file is copied to `BLUEWARD.exe.new`, verified, the running image is renamed to `BLUEWARD.exe.old`, `.new` is moved into place, the single-instance mutex is released, the new image starts with the original command line, and the old process exits. A failure after the rename restores `.old`, deletes `.new`, reacquires the mutex and keeps the launcher running with a stable `E_SELFUPDATE_*` code. The next start deletes `.old` and `.new` with three 200 ms retries. 0.1.1 and older cannot follow GitHub's `release-assets.githubusercontent.com` redirect, so their self-update fails; those users must download 0.1.5 manually once. From 0.1.2 onward self-update works through that host.
+Self-update is in-process; there is no helper executable. The new `BLUEWARD.exe` is downloaded from the canonical latest URL, verified against `launcher.size`/`launcher.sha256`, and its `RT_MANIFEST` is read as data to compare `requestedExecutionLevel` with the current elevation. The file is copied to `BLUEWARD.exe.new`, verified, the running image is renamed to `BLUEWARD.exe.old`, `.new` is moved into place, the single-instance mutex is released, the new image starts with the original command line, and the old process exits. A failure after the rename restores `.old`, deletes `.new`, reacquires the mutex and keeps the launcher running with a stable `E_SELFUPDATE_*` code. The next start deletes `.old` and `.new` with three 200 ms retries. 0.1.1 and older cannot follow GitHub's `release-assets.githubusercontent.com` redirect, so their self-update fails; those users must download 0.1.6 manually once. From 0.1.2 onward self-update works through that host.
 
 ## Network
 
-Initial requests are only the canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs: the latest manifest, `manifest-<revision>.json`, `BLUEWARD.exe`, and `patch-<revision>.zip`. Redirects are followed at most five times and only to `github.com`, `objects.githubusercontent.com` or `release-assets.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. Hosts are matched exactly, so `release-assets.githubusercontent.com.evil` is refused. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.5 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
+Initial requests are only the canonical `https://github.com/nightfun-pixel/ap-launcher/...` release URLs: the latest manifest, `manifest-<revision>.json`, `BLUEWARD.exe`, and `patch-<revision>.zip`. Redirects are followed at most five times and only to `github.com`, `objects.githubusercontent.com` or `release-assets.githubusercontent.com`, HTTPS, port 443, no userinfo, no fragment; a signed query is allowed only on a redirect target. Hosts are matched exactly, so `release-assets.githubusercontent.com.evil` is refused. A loop is detected by the visited URL set. TLS certificate and host-name validation stay enabled; TLS 1.2 or newer is required. The client sends `GET`, `User-Agent: BLUEWARD/0.1.6 (Windows NT 10.0; Win64; x64)`, `Accept-Encoding: identity`, no cookies, no authorization, no referer. The manifest cap is 262,144 bytes; the archive cap is 2,147,483,648 bytes; one payload cap is 1,073,741,824 bytes. Network errors and 5xx are retried up to three times with 1/2/4 s backoff; 404 and 410 are not retried. The implementation never calls the GitHub API host.
 
 ## Tests
 
@@ -160,7 +160,7 @@ The background clip is official promotional media, not a fan asset. It is **not 
 - Elevation comparison is implemented and the `asInvoker` path is tested; a `requireAdministrator` fixture (T-120) and real UAC runs (T-023, T-119) are manual.
 - Disk-space, per-game mutex contention, `ReplaceFileW` failure injection, ACL preservation, crash-kill recovery and UI responsiveness are not fully automated.
 - The executable is unsigned; SmartScreen will warn on first run.
-- The published 0.1.1 launcher cannot follow GitHub's release-assets redirect and cannot self-update; 0.1.5 must be downloaded manually once. The 0.1.2+ allowlist accepts only the documented `release-assets.githubusercontent.com` host, not a wildcard.
+- The published 0.1.1 launcher cannot follow GitHub's release-assets redirect and cannot self-update; 0.1.6 must be downloaded manually once. The 0.1.2+ allowlist accepts only the documented `release-assets.githubusercontent.com` host, not a wildcard.
 
 See `docs/GAPS.md` for the test-by-test list.
 

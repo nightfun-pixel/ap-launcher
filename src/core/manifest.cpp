@@ -294,7 +294,8 @@ bool TargetRules(std::string_view target, std::string& why, bool checkReserved) 
 
 const std::vector<std::string>& PayloadNames() {
     static const std::vector<std::string> names = {"vstring.bytes", "table_data.bytes", "static-text.r", "startup.r", "onest-font.r",
-                                                   "font-a00.r", "font-b00.r"};
+                                                   "font-a00.r", "font-b00.r", "settings-ui.r", "story-brief.r",
+                                                   "story-brief-builtin.r"};
     return names;
 }
 
@@ -544,9 +545,10 @@ bool ParseManifest(std::string_view json, Manifest& out, std::string& error, std
         return fail("E_MANIFEST_SCHEMA", FieldError("patch.size", "must be 1..2147483648"));
 
     const Json* files = patch->Find("files");
-    if (!files || !files->isArray() || (files->items().size() != 5 && files->items().size() != PayloadNames().size()))
-        return fail("E_MANIFEST_SCHEMA", FieldError("patch.files", "must list five legacy or seven current payloads"));
-    bool seen[5] = {false, false, false, false, false};
+    const std::size_t fileCount = files && files->isArray() ? files->items().size() : 0;
+    if (!files || !files->isArray() || (fileCount != 5 && fileCount != 7 && fileCount != 8 && fileCount != PayloadNames().size()))
+        return fail("E_MANIFEST_SCHEMA", FieldError("patch.files", "must list 5, 7, 8 or 10 payloads"));
+    std::vector<bool> seen(PayloadNames().size(), false);
     std::vector<std::string> targets;
     std::vector<std::string> basenames;
     std::uint64_t totalSize = 0;
